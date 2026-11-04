@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+  <!-- timestamp bracket motif -->
+  <rect x="1" y="2.5" width="1.6" height="11" rx="0.8" fill="#89B4FA"/>
+  <rect x="1" y="2.5" width="4" height="1.6" rx="0.8" fill="#89B4FA"/>
+  <rect x="1" y="11.9" width="4" height="1.6" rx="0.8" fill="#89B4FA"/>
+  <rect x="13.4" y="2.5" width="1.6" height="11" rx="0.8" fill="#89B4FA"/>
+  <rect x="11" y="2.5" width="4" height="1.6" rx="0.8" fill="#89B4FA"/>
+  <rect x="11" y="11.9" width="4" height="1.6" rx="0.8" fill="#89B4FA"/>
+  <!-- waveform bars -->
+  <rect x="6.2" y="6.4" width="1.5" height="3.2" rx="0.75" fill="#89DCEB"/>
+  <rect x="8.2" y="4.6" width="1.5" height="6.8" rx="0.75" fill="#CDD6F4"/>
+  <rect x="10.2" y="5.8" width="1.5" height="4.4" rx="0.75" fill="#CBA6F7"/>
+</svg>

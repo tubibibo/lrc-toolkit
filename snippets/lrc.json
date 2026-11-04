@@ -1,0 +1,25 @@
+{
+  "LRC metadata header": {
+    "prefix": "lrc-header",
+    "body": [
+      "[ti:${1:Title}]",
+      "[ar:${2:Artist}]",
+      "[al:${3:Album}]",
+      "[by:${4:Creator}]",
+      "[offset:${5:0}]",
+      "",
+      "[00:00.00]${6:First line}"
+    ],
+    "description": "Standard LRC metadata header followed by the first timed line"
+  },
+  "Timed lyric line": {
+    "prefix": "lrc-line",
+    "body": "[${1:00}:${2:00.00}]${3:Lyric text}",
+    "description": "One line with a single timestamp"
+  },
+  "Word-timed (enhanced) line": {
+    "prefix": "lrc-enhanced",
+    "body": "[${1:00:00.00}] <${2:00:00.10}>${3:word} <${4:00:00.50}>${5:word}$0",
+    "description": "Enhanced LRC line with word-level timings"
+  }
+}
