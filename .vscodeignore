@@ -1,0 +1,17 @@
+# Everything that is not needed inside the packaged extension.
+.vscode/**
+.github/**
+src/**
+test/**
+docs/**
+scripts/**
+node_modules/**
+dist/**/*.map
+esbuild.mjs
+vitest.config.ts
+eslint.config.mjs
+tsconfig.json
+.gitignore
+.gitattributes
+.github/**
+**/*.map

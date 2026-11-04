@@ -1,0 +1,155 @@
+{
+  "name": "lrc-toolkit",
+  "displayName": "LRC Toolkit",
+  "description": "A lightweight toolkit for editing LRC (synced lyrics) files: highlighting, live diagnostics, timestamp hovers, sorting, offset shifting and precision normalization.",
+  "version": "0.1.0",
+  "publisher": "awwdd",
+  "private": true,
+  "license": "MIT",
+  "icon": "media/icon.png",
+  "keywords": [
+    "lrc",
+    "lyrics",
+    "karaoke",
+    "synced lyrics",
+    "music"
+  ],
+  "categories": [
+    "Programming Languages",
+    "Formatters",
+    "Other"
+  ],
+  "engines": {
+    "vscode": "^1.85.0",
+    "node": ">=18"
+  },
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onLanguage:lrc"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/awwdd/lrc-toolkit.git"
+  },
+  "contributes": {
+    "languages": [
+      {
+        "id": "lrc",
+        "aliases": [
+          "LRC",
+          "lrc"
+        ],
+        "extensions": [
+          ".lrc"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./media/lrc-file-icon.svg",
+          "dark": "./media/lrc-file-icon.svg"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "lrc",
+        "scopeName": "source.lrc",
+        "path": "./syntaxes/lrc.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "lrc",
+        "path": "./snippets/lrc.json"
+      }
+    ],
+    "configuration": {
+      "title": "LRC Toolkit",
+      "properties": {
+        "lrcToolkit.gapThresholdSeconds": {
+          "type": "number",
+          "default": 8,
+          "minimum": 0,
+          "description": "Gaps longer than this many seconds between consecutive lyric lines are flagged as instrumental gaps (hovers and statistics)."
+        },
+        "lrcToolkit.format.spaceAfterTimestamp": {
+          "type": "boolean",
+          "default": false,
+          "description": "When formatting, normalize to exactly one space between the timestamp and the lyric text."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "lrcToolkit.sortByTimestamp",
+        "title": "LRC: Sort Lines by Timestamp"
+      },
+      {
+        "command": "lrcToolkit.shiftTimestamps",
+        "title": "LRC: Shift All Timestamps…"
+      },
+      {
+        "command": "lrcToolkit.applyOffsetTag",
+        "title": "LRC: Apply [offset:] Tag into Timestamps"
+      },
+      {
+        "command": "lrcToolkit.normalizePrecision",
+        "title": "LRC: Normalize Timestamp Precision…"
+      },
+      {
+        "command": "lrcToolkit.stripWordTimings",
+        "title": "LRC: Strip Enhanced (Word-Level) Timings"
+      },
+      {
+        "command": "lrcToolkit.expandMultiStampLines",
+        "title": "LRC: Expand Multi-Timestamp Lines"
+      },
+      {
+        "command": "lrcToolkit.showStats",
+        "title": "LRC: Show Document Statistics"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "lrcToolkit.sortByTimestamp",
+          "when": "resourceLangId == lrc",
+          "group": "lrcToolkit@1"
+        },
+        {
+          "command": "lrcToolkit.applyOffsetTag",
+          "when": "resourceLangId == lrc",
+          "group": "lrcToolkit@2"
+        },
+        {
+          "command": "lrcToolkit.showStats",
+          "when": "resourceLangId == lrc",
+          "group": "lrcToolkit@3"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "compile": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "lint": "eslint .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "smoke": "node scripts/smoke-adapter.mjs",
+    "package": "vsce package --no-dependencies",
+    "verify": "npm run typecheck && npm run lint && npm run format:check && npm run test && npm run compile && npm run smoke && npm run package"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@types/node": "^20.17.10",
+    "@types/vscode": "1.85.0",
+    "@vscode/vsce": "^3.2.1",
+    "esbuild": "^0.25.0",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.1",
+    "vitest": "^2.1.8"
+  }
+}
