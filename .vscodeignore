@@ -6,12 +6,13 @@ test/**
 docs/**
 scripts/**
 node_modules/**
-dist/**/*.map
 esbuild.mjs
 vitest.config.ts
 eslint.config.mjs
 tsconfig.json
 .gitignore
 .gitattributes
-.github/**
+.editorconfig
+.prettierrc.json
+.prettierignore
 **/*.map
