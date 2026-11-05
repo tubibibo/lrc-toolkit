@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { analyze } from "../../src/core/analyzer";
 import { parseDocument } from "../../src/core/parser";
 
 describe("parseDocument", () => {
@@ -107,6 +108,22 @@ describe("parseDocument", () => {
     expect(doc.eol).toBe("\r\n");
     expect(doc.lines).toHaveLength(3); // tag, cue, phantom blank
     expect(doc.lines[2]?.kind).toBe("blank");
+  });
+
+  it("splits mixed LF/CRLF documents without carriage-return residue", () => {
+    const doc = parseDocument("[00:01.00]a\r\n[00:02.00]b\n[00:03.00]c");
+    expect(doc.eol).toBe("\r\n"); // first break is CRLF
+    expect(doc.lines.map((line) => (line.kind === "cue" ? line.text : "other"))).toEqual([
+      "a",
+      "b",
+      "c",
+    ]);
+    // No \r survives inside any parsed line span (offsets stay correct).
+    const hasResidue = doc.lines.some((line) =>
+      doc.text.slice(line.span.start, line.span.end).includes("\r"),
+    );
+    expect(hasResidue).toBe(false);
+    expect(analyze(doc)).toEqual([]);
   });
 
   it("produces a phantom blank line for a trailing newline", () => {

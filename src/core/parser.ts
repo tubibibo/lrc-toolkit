@@ -29,22 +29,29 @@ interface RawLine {
   end: number;
 }
 
-/** Split `text` into content lines with absolute spans; a trailing EOL yields a phantom blank line. */
-function splitLines(text: string, eol: "\n" | "\r\n"): RawLine[] {
+/** Detect the line ending from the first break in the text (none found → LF). */
+function detectEol(text: string): "\n" | "\r\n" {
+  const firstLf = text.indexOf("\n");
+  if (firstLf === -1) {
+    return "\n";
+  }
+  return firstLf > 0 && text[firstLf - 1] === "\r" ? "\r\n" : "\n";
+}
+
+/**
+ * Split `text` into content lines with absolute spans, handling mixed
+ * LF / CRLF / CR line endings. A trailing break yields a phantom blank line.
+ */
+function splitLines(text: string): RawLine[] {
   const lines: RawLine[] = [];
   let start = 0;
-  for (;;) {
-    const eolIndex = text.indexOf(eol, start);
-    if (eolIndex === -1) {
-      lines.push({ text: text.slice(start), start, end: text.length });
-      return lines;
-    }
-    lines.push({ text: text.slice(start, eolIndex), start, end: eolIndex });
-    start = eolIndex + eol.length;
-    if (start > text.length) {
-      return lines;
-    }
+  for (const match of text.matchAll(/\r\n|\n|\r/g)) {
+    const index = match.index ?? 0;
+    lines.push({ text: text.slice(start, index), start, end: index });
+    start = index + match[0].length;
   }
+  lines.push({ text: text.slice(start), start, end: text.length });
+  return lines;
 }
 
 /** Parse every leading `[...]` bracket token of a line. */
@@ -212,9 +219,8 @@ function buildLine(raw: RawLine, index: number): LrcLine {
 
 /** Parse raw LRC text into a structured document. */
 export function parseDocument(text: string): LrcDocument {
-  const eol: "\n" | "\r\n" = text.includes("\r\n") ? "\r\n" : "\n";
-  const rawLines = splitLines(text, eol);
-  const lines = rawLines.map(buildLine);
+  const eol = detectEol(text);
+  const lines = splitLines(text).map(buildLine);
   return { text, eol, lines };
 }
 
