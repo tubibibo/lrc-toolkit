@@ -25,6 +25,18 @@ describe("sortCues", () => {
     expect(sortCues(doc)?.edit.newText).toBe("[ti:x]\n\n[00:05.00]a\n[00:10.00]b\n");
   });
 
+  it("keeps each line's own terminator when sorting a mixed-EOL document", () => {
+    const text = "[ti:x]\r\n[00:10.00]b\n[00:05.00]a\n";
+    const result = sortCues(parseDocument(text));
+    expect(result?.edit.newText).toBe("[ti:x]\r\n[00:05.00]a\n[00:10.00]b\n");
+  });
+
+  it("keeps a document without a trailing break breakless after sorting", () => {
+    const text = "[00:02.00]b\r\n[00:01.00]a";
+    const result = sortCues(parseDocument(text));
+    expect(result?.edit.newText).toBe("[00:01.00]a\r\n[00:02.00]b");
+  });
+
   it("does not let a uniform offset tag change the relative order", () => {
     const doc = parseDocument("[offset:+8000]\n[00:12.00]a\n[00:05.00]b\n");
     expect(sortCues(doc)?.edit.newText).toBe("[offset:+8000]\n[00:05.00]b\n[00:12.00]a\n");
@@ -240,6 +252,12 @@ describe("expandMultiStampLines", () => {
     const { edits, lineCount } = expandMultiStampLines(parseDocument(text));
     expect(lineCount).toBe(1);
     expect(applyEdits(text, edits)).toBe("[00:01.00]chorus\n[00:02.00]chorus\n");
+  });
+
+  it("joins expanded lines with the source line's own terminator", () => {
+    const text = "[00:01.00][00:02.00]chorus\r\n[00:03.00]next\n";
+    const { edits } = expandMultiStampLines(parseDocument(text));
+    expect(edits[0]?.newText).toBe("[00:01.00]chorus\r\n[00:02.00]chorus");
   });
 
   it("ignores single-stamp lines", () => {

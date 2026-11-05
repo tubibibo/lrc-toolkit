@@ -157,11 +157,21 @@ export interface LrcDocument {
   text: string;
   /** The first line break found in the text, verbatim (LF for break-free docs). */
   eol: Eol;
+  /**
+   * The exact terminator of each line, parallel to `lines` (`""` for the
+   * final line when the text does not end with a break). Whole-document
+   * rewrites (sort) use these so mixed-EOL documents keep every line's own
+   * ending instead of being normalized to `eol`.
+   */
+  lineEndings: readonly LineEnding[];
   lines: LrcLine[];
 }
 
 /** Line endings the toolkit understands, including lone CR (classic Mac). */
 export type Eol = "\n" | "\r\n" | "\r";
+
+/** A line's terminator as it appears in the text; `""` when there is none. */
+export type LineEnding = "" | Eol;
 
 export interface InstrumentalGap {
   fromMs: number;

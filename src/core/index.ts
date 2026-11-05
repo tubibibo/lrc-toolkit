@@ -15,6 +15,7 @@ export type {
   LrcDiagnostic,
   LrcDocument,
   LrcLine,
+  LineEnding,
   Severity,
   TagLine,
   TagToken,

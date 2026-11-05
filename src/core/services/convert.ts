@@ -74,10 +74,13 @@ export function expandMultiStampLines(doc: LrcDocument): ConvertResult {
     const parts = line.stamps.map(
       (stampSpan) => doc.text.slice(stampSpan.start, stampSpan.end) + text,
     );
+    // Inserted breaks adopt the source line's own terminator, so mixed-EOL
+    // documents do not get normalized to the first-line EOL.
+    const lineEnding = doc.lineEndings[line.line] || doc.eol;
     edits.push({
       start: line.span.start,
       end: line.span.end,
-      newText: parts.join(doc.eol),
+      newText: parts.join(lineEnding),
     });
     lineCount++;
   }

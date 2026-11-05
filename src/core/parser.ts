@@ -12,6 +12,7 @@ import type {
   Eol,
   LrcDocument,
   LrcLine,
+  LineEnding,
   TagToken,
   TimestampSpan,
   Token,
@@ -33,6 +34,8 @@ interface RawLine {
   text: string;
   start: number;
   end: number;
+  /** The exact terminator after this line (`""` for the final line). */
+  eol: LineEnding;
 }
 
 /** Detect the line ending from the first break in the text, verbatim (none found → LF). */
@@ -50,10 +53,10 @@ function splitLines(text: string): RawLine[] {
   let start = 0;
   for (const match of text.matchAll(/\r\n|\n|\r/g)) {
     const index = match.index ?? 0;
-    lines.push({ text: text.slice(start, index), start, end: index });
+    lines.push({ text: text.slice(start, index), start, end: index, eol: match[0] as LineEnding });
     start = index + match[0].length;
   }
-  lines.push({ text: text.slice(start), start, end: text.length });
+  lines.push({ text: text.slice(start), start, end: text.length, eol: "" });
   return lines;
 }
 
@@ -262,8 +265,10 @@ function buildLine(raw: RawLine, index: number): LrcLine {
 /** Parse raw LRC text into a structured document. */
 export function parseDocument(text: string): LrcDocument {
   const eol = detectEol(text);
-  const lines = splitLines(text).map(buildLine);
-  return { text, eol, lines };
+  const raw = splitLines(text);
+  const lines = raw.map(buildLine);
+  const lineEndings = raw.map((line) => line.eol);
+  return { text, eol, lineEndings, lines };
 }
 
 /** Absolute text of a line without its line break. */

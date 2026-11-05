@@ -31,8 +31,14 @@ function applyOffsetTagLocation(doc: LrcDocument, location: OffsetTagLocation): 
   // otherwise remove just the token so sibling tags survive.
   if (line.additional.length === 0 && line.primarySpan.start === tag.span.start) {
     let deleteEnd = line.span.end;
-    if (doc.text.slice(deleteEnd, deleteEnd + doc.eol.length) === doc.eol) {
-      deleteEnd += doc.eol.length;
+    // Swallow the line's own terminator (which may differ from doc.eol in a
+    // mixed-EOL document).
+    const ending = doc.lineEndings[line.line] ?? "";
+    if (
+      ending.length > 0 &&
+      doc.text.slice(deleteEnd, deleteEnd + ending.length) === ending
+    ) {
+      deleteEnd += ending.length;
     }
     return { start: line.span.start, end: deleteEnd, newText: "" };
   }
