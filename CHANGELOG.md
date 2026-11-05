@@ -8,6 +8,10 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ### Fixed
 
+- Commands now check whether their edits actually landed: on a read-only
+  (or externally changed) document `applyEdit` fails silently, and the
+  toolkit used to still report "Sorted N cue line(s)". A failed application
+  now shows a warning instead of a success message.
 - `Shift All Timestamps`, `Apply [offset:] Tag` and `Normalize Timestamp Precision` now include
   enhanced (word-level) timings, so commands no longer leave word timings behind the new cue
   positions.

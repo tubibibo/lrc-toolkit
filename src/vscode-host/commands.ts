@@ -29,7 +29,15 @@ export function registerCommands(store: DocumentStore): vscode.Disposable[] {
       ...extra,
     });
     if (outcome.edits.length > 0) {
-      await applyEdits(editor, outcome.edits);
+      const applied = await applyEdits(editor, outcome.edits);
+      if (!applied) {
+        // applyEdit fails silently on read-only (or externally changed)
+        // documents — never report success for edits that did not land.
+        void vscode.window.showWarningMessage(
+          "LRC Toolkit: the edits could not be applied — the document may be read-only.",
+        );
+        return;
+      }
     }
     for (const message of outcome.messages) {
       void vscode.window.showInformationMessage(message);
@@ -101,7 +109,7 @@ export function registerCommands(store: DocumentStore): vscode.Disposable[] {
   ];
 }
 
-async function applyEdits(editor: vscode.TextEditor, edits: TextEdit[]): Promise<void> {
+async function applyEdits(editor: vscode.TextEditor, edits: TextEdit[]): Promise<boolean> {
   const workspaceEdit = new vscode.WorkspaceEdit();
   const uri = editor.document.uri;
   for (const edit of edits) {
@@ -114,5 +122,5 @@ async function applyEdits(editor: vscode.TextEditor, edits: TextEdit[]): Promise
       edit.newText,
     );
   }
-  await vscode.workspace.applyEdit(workspaceEdit);
+  return vscode.workspace.applyEdit(workspaceEdit);
 }
