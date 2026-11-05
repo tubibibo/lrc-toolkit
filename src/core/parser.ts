@@ -139,7 +139,7 @@ function parseWordTimings(
 }
 
 /** Inline `[...]` tokens in lyric text that look like malformed timestamps. */
-const INLINE_BRACKET = /\[([^\[\]\n]*)\]/g;
+const INLINE_BRACKET = /\[([^[\]\n]*)\]/g;
 
 /**
  * Stamp-shaped `[...]` tokens inside a cue's text region. Letter-only labels

@@ -104,7 +104,6 @@ export function formatStatsReport(stats: DocumentStats, gapThresholdSeconds: num
 
 /** One-line summary for message toasts; the full report lives in the output channel. */
 export function formatStatsSummary(stats: DocumentStats, gapThresholdSeconds: number): string {
-  const duration =
-    stats.effectiveTimesMs.length > 0 ? formatDuration(stats.durationMs) : "—";
+  const duration = stats.effectiveTimesMs.length > 0 ? formatDuration(stats.durationMs) : "—";
   return `LRC stats: ${stats.cueCount} cue(s), duration ${duration}, ${stats.gaps.length} instrumental gap(s) > ${gapThresholdSeconds}s — details in the output channel.`;
 }
