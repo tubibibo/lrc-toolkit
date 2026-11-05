@@ -16,5 +16,6 @@ tsconfig.json
 .editorconfig
 .prettierrc.json
 .nvmrc
+SECURITY.md
 .prettierignore
 **/*.map
