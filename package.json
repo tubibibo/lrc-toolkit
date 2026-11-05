@@ -131,13 +131,34 @@
         }
       ],
       "commandPalette": [
-        { "command": "lrcToolkit.sortByTimestamp", "when": "resourceLangId == lrc" },
-        { "command": "lrcToolkit.shiftTimestamps", "when": "resourceLangId == lrc" },
-        { "command": "lrcToolkit.applyOffsetTag", "when": "resourceLangId == lrc" },
-        { "command": "lrcToolkit.normalizePrecision", "when": "resourceLangId == lrc" },
-        { "command": "lrcToolkit.stripWordTimings", "when": "resourceLangId == lrc" },
-        { "command": "lrcToolkit.expandMultiStampLines", "when": "resourceLangId == lrc" },
-        { "command": "lrcToolkit.showStats", "when": "resourceLangId == lrc" }
+        {
+          "command": "lrcToolkit.sortByTimestamp",
+          "when": "resourceLangId == lrc"
+        },
+        {
+          "command": "lrcToolkit.shiftTimestamps",
+          "when": "resourceLangId == lrc"
+        },
+        {
+          "command": "lrcToolkit.applyOffsetTag",
+          "when": "resourceLangId == lrc"
+        },
+        {
+          "command": "lrcToolkit.normalizePrecision",
+          "when": "resourceLangId == lrc"
+        },
+        {
+          "command": "lrcToolkit.stripWordTimings",
+          "when": "resourceLangId == lrc"
+        },
+        {
+          "command": "lrcToolkit.expandMultiStampLines",
+          "when": "resourceLangId == lrc"
+        },
+        {
+          "command": "lrcToolkit.showStats",
+          "when": "resourceLangId == lrc"
+        }
       ]
     }
   },
@@ -147,7 +168,7 @@
     "watch": "node esbuild.mjs --watch",
     "lint": "eslint .",
     "format:check": "prettier --check .",
-    "test": "vitest run",
+    "test": "vitest run --coverage",
     "smoke": "node scripts/smoke-adapter.mjs",
     "package": "vsce package --no-dependencies",
     "verify": "npm run typecheck && npm run lint && npm run format:check && npm run test && npm run compile && npm run smoke && npm run package"
@@ -156,6 +177,7 @@
     "@eslint/js": "^9.17.0",
     "@types/node": "^20.17.10",
     "@types/vscode": "1.85.0",
+    "@vitest/coverage-v8": "^2.1.9",
     "@vscode/vsce": "^3.2.1",
     "esbuild": "^0.25.0",
     "eslint": "^9.17.0",

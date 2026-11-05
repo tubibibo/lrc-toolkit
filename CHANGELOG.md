@@ -41,6 +41,11 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 - Timestamp hovers on multi-timestamp lines now measure the delta and gap against the
   adjacent stamp in document order (same line first), instead of always using the previous
   line's first stamp.
+
+### Changed (tooling)
+
+- `npm test` runs with V8 coverage and enforces thresholds (90/80/90) on the framework-free
+  core; CI verifies on Node 20 and 22.
 - Shifting by 0 ms (or any shift that leaves every timestamp unchanged) no longer emits edits
   and reports "Nothing to shift" instead of dirtying the document; non-canonical stamps are
   still canonicalized by the same command.

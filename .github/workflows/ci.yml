@@ -9,12 +9,15 @@ jobs:
   verify:
     name: Typecheck, lint, test & package
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [20, 22]
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ matrix.node }}
           cache: npm
 
       - name: Install dependencies
@@ -29,7 +32,7 @@ jobs:
       - name: Format check
         run: npm run format:check
 
-      - name: Unit tests
+      - name: Unit tests with coverage gate
         run: npm test
 
       - name: Bundle
@@ -44,5 +47,5 @@ jobs:
       - name: Upload extension artifact
         uses: actions/upload-artifact@v4
         with:
-          name: lrc-toolkit-vsix
+          name: lrc-toolkit-vsix-node${{ matrix.node }}
           path: "*.vsix"
