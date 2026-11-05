@@ -119,6 +119,27 @@ describe("parseDocument", () => {
     expect(doc.lines[2]?.kind).toBe("blank");
   });
 
+  it("detects CR-only documents", () => {
+    const doc = parseDocument("[00:02.00]b\r[00:01.00]a\r");
+    expect(doc.eol).toBe("\r");
+    expect(doc.lines.map((line) => (line.kind === "cue" ? line.text : "other"))).toEqual([
+      "b",
+      "a",
+      "other", // phantom blank after the trailing break
+    ]);
+  });
+
+  it("handles documents mixing CRLF, LF and CR", () => {
+    const doc = parseDocument("[00:01.00]a\r\n[00:02.00]b\n[00:03.00]c\r[00:04.00]d");
+    expect(doc.eol).toBe("\r\n"); // first break wins
+    expect(doc.lines.map((line) => (line.kind === "cue" ? line.text : "other"))).toEqual([
+      "a",
+      "b",
+      "c",
+      "d",
+    ]);
+  });
+
   it("splits mixed LF/CRLF documents without carriage-return residue", () => {
     const doc = parseDocument("[00:01.00]a\r\n[00:02.00]b\n[00:03.00]c");
     expect(doc.eol).toBe("\r\n"); // first break is CRLF

@@ -133,9 +133,13 @@ export interface Token extends BracketSpan {
 export interface LrcDocument {
   /** Original text (needed for whole-document rewrites). */
   text: string;
-  eol: "\n" | "\r\n";
+  /** The first line break found in the text, verbatim (LF for break-free docs). */
+  eol: Eol;
   lines: LrcLine[];
 }
+
+/** Line endings the toolkit understands, including lone CR (classic Mac). */
+export type Eol = "\n" | "\r\n" | "\r";
 
 export interface InstrumentalGap {
   fromMs: number;

@@ -44,6 +44,11 @@ describe("sortCues", () => {
     expect(sortCues(doc)?.edit.newText).toBe("[00:01.00]a\n[00:02.00]b\n");
   });
 
+  it("sorts CR-only documents without converting their line endings", () => {
+    const doc = parseDocument("[00:02.00]b\r[00:01.00]a\r");
+    expect(sortCues(doc)?.edit.newText).toBe("[00:01.00]a\r[00:02.00]b\r");
+  });
+
   it("reports dropped unknown and interior blank lines, keeping the separator", () => {
     const doc = parseDocument("[ti:x]\n\n[00:10.00]b\n\n[xyz]unknown\n\n[00:05.00]a\n");
     const result = sortCues(doc);
@@ -106,6 +111,12 @@ describe("applyOffsetTag", () => {
   it("returns null when no valid offset tag exists", () => {
     expect(applyOffsetTag(parseDocument("[00:01.00]a\n"))).toBeNull();
     expect(applyOffsetTag(parseDocument("[offset:abc]\n"))).toBeNull();
+  });
+
+  it("applies offset tags in CR-only documents without stray breaks", () => {
+    const text = "[offset:+500]\r[00:10.00]a\r";
+    const result = applyOffsetTag(parseDocument(text));
+    expect(applyEdits(text, result!.edits)).toBe("[00:09.50]a\r");
   });
 
   it("bakes the first offset tag and reports leftover duplicates", () => {

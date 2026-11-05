@@ -14,6 +14,8 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 - Angle brackets that are not timing-shaped (`第<2>段`, `a <b> c`, `I <3 you`) are kept as lyric
   text instead of being flagged as malformed timings and stripped by `Strip Word Timings`;
   only `<digits:…>` tokens are treated as timing attempts.
+- CR-only and mixed line-ending documents keep their original line endings through sorting and
+  offset baking instead of being rewritten to LF or leaving stray carriage returns.
 
 ## [0.1.0] - 2026-11-05
 

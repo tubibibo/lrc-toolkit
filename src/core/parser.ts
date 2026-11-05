@@ -9,6 +9,7 @@
 import type {
   BracketSpan,
   CueLine,
+  Eol,
   LrcDocument,
   LrcLine,
   TimestampSpan,
@@ -33,13 +34,10 @@ interface RawLine {
   end: number;
 }
 
-/** Detect the line ending from the first break in the text (none found → LF). */
-function detectEol(text: string): "\n" | "\r\n" {
-  const firstLf = text.indexOf("\n");
-  if (firstLf === -1) {
-    return "\n";
-  }
-  return firstLf > 0 && text[firstLf - 1] === "\r" ? "\r\n" : "\n";
+/** Detect the line ending from the first break in the text, verbatim (none found → LF). */
+function detectEol(text: string): Eol {
+  const match = /\r\n|\n|\r/.exec(text);
+  return (match?.[0] as Eol | undefined) ?? "\n";
 }
 
 /**
