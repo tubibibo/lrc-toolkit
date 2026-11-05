@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 
 import { allTags } from "../core";
+import { truncateSafe } from "../util/text";
 import { formatClock } from "../util/time";
 import type { DocumentStore } from "./documentStore";
 
@@ -35,7 +36,7 @@ export function registerSymbols(store: DocumentStore): vscode.Disposable {
             document.positionAt(line.span.end),
           );
           const stamp = line.stamps[0];
-          const text = line.text.trim().slice(0, 40);
+          const text = truncateSafe(line.text.trim(), 40);
           const label = stamp ? `${formatClock(stamp.stamp.totalMs)} ${text}` : text;
           if (label.trim().length > 0) {
             symbols.push(
