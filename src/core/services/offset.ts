@@ -15,13 +15,16 @@ export interface ApplyOffsetResult {
   shiftedCount: number;
   clampedCount: number;
   offsetMs: number;
+  /** Valid `[offset:]` tags left in the document after baking the first one. */
+  remainingOffsetTags: number;
 }
 
 export function applyOffsetTag(doc: LrcDocument): ApplyOffsetResult | null {
   const offsetMs = resolveOffset(doc, []);
-  const tagLine = doc.lines.find(
+  const validOffsetTags = doc.lines.filter(
     (line) => line.kind === "tag" && line.key === "offset" && OFFSET_VALUE.test(line.value.trim()),
   );
+  const tagLine = validOffsetTags[0];
   if (!tagLine || tagLine.kind !== "tag") {
     return null;
   }
@@ -40,5 +43,6 @@ export function applyOffsetTag(doc: LrcDocument): ApplyOffsetResult | null {
     shiftedCount: shift.edits.length,
     clampedCount: shift.clampedCount,
     offsetMs,
+    remainingOffsetTags: validOffsetTags.length - 1,
   };
 }

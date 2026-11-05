@@ -13,18 +13,20 @@ import { isCommandId } from "../../src/core/commands";
 describe("sortCues", () => {
   it("sorts cues and keeps tags first, preserving stable ties", () => {
     const doc = parseDocument("[ti:x]\n[00:10.00]b\n[00:05.00]a\n[00:10.00]c\n");
-    const edit = sortCues(doc);
-    expect(edit?.newText).toBe("[ti:x]\n[00:05.00]a\n[00:10.00]b\n[00:10.00]c\n");
+    const result = sortCues(doc);
+    expect(result?.edit.newText).toBe("[ti:x]\n[00:05.00]a\n[00:10.00]b\n[00:10.00]c\n");
+    expect(result?.cueCount).toBe(3);
+    expect(result?.droppedLines).toBe(0);
   });
 
   it("keeps the blank separator between header and lyrics when present", () => {
     const doc = parseDocument("[ti:x]\n\n[00:10.00]b\n[00:05.00]a\n");
-    expect(sortCues(doc)?.newText).toBe("[ti:x]\n\n[00:05.00]a\n[00:10.00]b\n");
+    expect(sortCues(doc)?.edit.newText).toBe("[ti:x]\n\n[00:05.00]a\n[00:10.00]b\n");
   });
 
   it("does not let a uniform offset tag change the relative order", () => {
     const doc = parseDocument("[offset:+8000]\n[00:12.00]a\n[00:05.00]b\n");
-    expect(sortCues(doc)?.newText).toBe("[offset:+8000]\n[00:05.00]b\n[00:12.00]a\n");
+    expect(sortCues(doc)?.edit.newText).toBe("[offset:+8000]\n[00:05.00]b\n[00:12.00]a\n");
   });
 
   it("returns null when there is nothing to sort", () => {
@@ -34,12 +36,27 @@ describe("sortCues", () => {
 
   it("preserves trailing blank lines and the final newline", () => {
     const doc = parseDocument("[00:02.00]b\n[00:01.00]a\n\n\n");
-    expect(sortCues(doc)?.newText).toBe("[00:01.00]a\n[00:02.00]b\n\n\n");
+    expect(sortCues(doc)?.edit.newText).toBe("[00:01.00]a\n[00:02.00]b\n\n\n");
   });
 
   it("drops interior blank lines while sorting", () => {
     const doc = parseDocument("[00:02.00]b\n\n\n[00:01.00]a\n");
-    expect(sortCues(doc)?.newText).toBe("[00:01.00]a\n[00:02.00]b\n");
+    expect(sortCues(doc)?.edit.newText).toBe("[00:01.00]a\n[00:02.00]b\n");
+  });
+
+  it("reports dropped unknown and interior blank lines, keeping the separator", () => {
+    const doc = parseDocument("[ti:x]\n\n[00:10.00]b\n\n[xyz]unknown\n\n[00:05.00]a\n");
+    const result = sortCues(doc);
+    expect(result?.edit.newText).toBe("[ti:x]\n\n[00:05.00]a\n[00:10.00]b\n");
+    expect(result?.cueCount).toBe(2);
+    // 1 unknown + 2 interior blanks dropped; the separator blank is restored, not counted.
+    expect(result?.droppedLines).toBe(3);
+  });
+
+  it("silently sorts a document without anything to drop", () => {
+    const outcome = runCommand("sortByTimestamp", "[ti:x]\n[00:02.00]b\n[00:01.00]a\n");
+    expect(outcome.messages).toEqual([]);
+    expect(outcome.edits).toHaveLength(1);
   });
 });
 
@@ -77,6 +94,19 @@ describe("applyOffsetTag", () => {
   it("returns null when no valid offset tag exists", () => {
     expect(applyOffsetTag(parseDocument("[00:01.00]a\n"))).toBeNull();
     expect(applyOffsetTag(parseDocument("[offset:abc]\n"))).toBeNull();
+  });
+
+  it("bakes the first offset tag and reports leftover duplicates", () => {
+    const text = "[offset:+500]\n[offset:-200]\n[00:10.00]a\n";
+    const result = applyOffsetTag(parseDocument(text));
+    expect(result?.offsetMs).toBe(500);
+    expect(result?.remainingOffsetTags).toBe(1);
+    expect(applyEdits(text, result!.edits)).toBe("[offset:-200]\n[00:09.50]a\n");
+
+    const outcome = runCommand("applyOffsetTag", text);
+    expect(
+      outcome.messages.some((message) => message.includes("additional [offset:] tag(s) remain")),
+    ).toBe(true);
   });
 });
 

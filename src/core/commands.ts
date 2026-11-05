@@ -61,10 +61,17 @@ export function runCommand(
 
   switch (id) {
     case "sortByTimestamp": {
-      const edit = sortCues(doc);
-      return edit
-        ? { edits: [edit], messages: [] }
-        : { edits: [], messages: ["No timestamped lines to sort."] };
+      const result = sortCues(doc);
+      if (!result) {
+        return { edits: [], messages: ["No timestamped lines to sort."] };
+      }
+      const messages =
+        result.droppedLines > 0
+          ? [
+              `Sorted ${result.cueCount} cue line(s); removed ${result.droppedLines} blank or unrecognized line(s).`,
+            ]
+          : [];
+      return { edits: [result.edit], messages };
     }
 
     case "shiftTimestamps": {
@@ -87,6 +94,11 @@ export function runCommand(
       const messages = [
         `Shifted ${result.shiftedCount} timestamp(s) by ${result.offsetMs} ms and removed the tag.`,
       ];
+      if (result.remainingOffsetTags > 0) {
+        messages.push(
+          `${result.remainingOffsetTags} additional [offset:] tag(s) remain — players may ignore anything after the first.`,
+        );
+      }
       if (result.clampedCount > 0) {
         messages.push(
           `${result.clampedCount} timestamp(s) were clamped to 00:00.00 — they would have gone negative.`,
