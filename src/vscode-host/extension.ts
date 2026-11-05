@@ -16,7 +16,7 @@ export function activate(context: vscode.ExtensionContext): void {
     registerCodeActions(store),
     registerSymbols(store),
     registerFormatter(store),
-    ...registerCommands(),
+    ...registerCommands(store),
   );
 }
 

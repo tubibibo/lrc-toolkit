@@ -28,6 +28,7 @@ export type {
 
 export { allTags } from "./model";
 export { analyze, resolveOffset } from "./analyzer";
+export { shouldOfferSortAction } from "./policy";
 export { parseDocument, rawLineText } from "./parser";
 export { describeTag, inspectAt } from "./hover";
 export type { HoverTarget } from "./hover";
@@ -38,4 +39,4 @@ export { shiftTimestamps } from "./services/shift";
 export { applyOffsetTag } from "./services/offset";
 export { normalizePrecision, normalizeSpacing } from "./services/normalize";
 export { expandMultiStampLines, stripWordTimings } from "./services/convert";
-export { computeStats, formatStatsReport } from "./services/stats";
+export { computeStats, formatStatsReport, formatStatsSummary } from "./services/stats";

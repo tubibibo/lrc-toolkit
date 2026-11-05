@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 
-import { analyze, isCommandId } from "../core";
+import { allTags, analyze, isCommandId, shouldOfferSortAction } from "../core";
 import type { LrcDiagnostic, LrcDocument } from "../core";
 import type { DocumentStore } from "./documentStore";
 
@@ -27,12 +27,13 @@ class LrcCodeActionProvider implements vscode.CodeActionProvider {
   ): vscode.CodeAction[] {
     const actions: vscode.CodeAction[] = [];
     const lrcDoc = this.store.get(document);
+    const issues = analyze(lrcDoc);
 
     if (requested(context, vscode.CodeActionKind.QuickFix)) {
-      actions.push(...this.quickFixes(document, range, lrcDoc));
+      actions.push(...this.quickFixes(document, range, issues));
     }
-    if (requested(context, vscode.CodeActionKind.Source) || requested(context, SOURCE_SORT)) {
-      actions.push(...this.sourceActions(lrcDoc));
+    if (requested(context, vscode.CodeActionKind.Source)) {
+      actions.push(...this.sourceActions(lrcDoc, context, issues));
     }
     return actions;
   }
@@ -40,10 +41,10 @@ class LrcCodeActionProvider implements vscode.CodeActionProvider {
   private quickFixes(
     document: vscode.TextDocument,
     range: vscode.Range,
-    lrcDoc: LrcDocument,
+    issues: LrcDiagnostic[],
   ): vscode.CodeAction[] {
     const actions: vscode.CodeAction[] = [];
-    for (const issue of analyze(lrcDoc)) {
+    for (const issue of issues) {
       if (!issue.fix) {
         continue;
       }
@@ -77,12 +78,26 @@ class LrcCodeActionProvider implements vscode.CodeActionProvider {
     return actions;
   }
 
-  private sourceActions(lrcDoc: LrcDocument): vscode.CodeAction[] {
+  private sourceActions(
+    lrcDoc: LrcDocument,
+    context: vscode.CodeActionContext,
+    issues: LrcDiagnostic[],
+  ): vscode.CodeAction[] {
     const actions: vscode.CodeAction[] = [];
 
-    const sort = new vscode.CodeAction("Sort all lines by timestamp", SOURCE_SORT);
-    sort.command = { title: sort.title, command: "lrcToolkit.sortByTimestamp" };
-    actions.push(sort);
+    // Sorted files should not see a permanent "Sort" entry on every lightbulb;
+    // offer it when the timeline is broken or the Refactor menu asked for it.
+    const explicit = context.only !== undefined && requested(context, SOURCE_SORT);
+    if (
+      shouldOfferSortAction({
+        explicitlyRequested: explicit,
+        hasDecreasingTimestamps: issues.some((issue) => issue.code === "decreasing-timestamp"),
+      })
+    ) {
+      const sort = new vscode.CodeAction("Sort all lines by timestamp", SOURCE_SORT);
+      sort.command = { title: sort.title, command: "lrcToolkit.sortByTimestamp" };
+      actions.push(sort);
+    }
 
     const hasWordTimings = lrcDoc.lines.some(
       (line) =>
@@ -97,7 +112,9 @@ class LrcCodeActionProvider implements vscode.CodeActionProvider {
       actions.push(strip);
     }
 
-    const hasOffsetTag = lrcDoc.lines.some((line) => line.kind === "tag" && line.key === "offset");
+    const hasOffsetTag = lrcDoc.lines.some(
+      (line) => line.kind === "tag" && allTags(line).some((tag) => tag.key === "offset"),
+    );
     if (hasOffsetTag) {
       const apply = new vscode.CodeAction(
         "Apply [offset:] tag into timestamps",

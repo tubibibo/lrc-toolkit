@@ -29,6 +29,15 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 - Malformed timestamps buried inside lyric text (`hello [01:60] world`) now get diagnostics,
   and the grammar reserves red for timing-shaped brackets only: section labels like
   `[Chorus]` render neutrally instead of red.
+
+### Changed
+
+- The lightbulb only offers "Sort all lines by timestamp" when the timeline is actually broken
+  (or when the Refactor menu explicitly asks for it).
+- Toolkit commands are hidden from the command palette for non-LRC files
+  (`resourceLangId == lrc`).
+- Document statistics show a one-line summary in the message toast; the full report stays in
+  the `LRC Toolkit` output channel.
 - Shifting by 0 ms (or any shift that leaves every timestamp unchanged) no longer emits edits
   and reports "Nothing to shift" instead of dirtying the document; non-canonical stamps are
   still canonicalized by the same command.

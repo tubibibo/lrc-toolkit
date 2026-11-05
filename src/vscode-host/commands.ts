@@ -1,8 +1,9 @@
 import * as vscode from "vscode";
 
-import { runCommand } from "../core";
+import { computeStats, formatStatsReport, formatStatsSummary, runCommand } from "../core";
 import type { CommandId, CommandOptions, TextEdit } from "../core";
 import { getSettings } from "./config";
+import type { DocumentStore } from "./documentStore";
 
 const DELTA_PATTERN = /^-?\d+$/;
 
@@ -13,7 +14,7 @@ function activeLrcEditor(): vscode.TextEditor | null {
 }
 
 /** Register every user-facing command declared in `package.json`. */
-export function registerCommands(): vscode.Disposable[] {
+export function registerCommands(store: DocumentStore): vscode.Disposable[] {
   const channel = vscode.window.createOutputChannel("LRC Toolkit");
 
   const execute = async (commandId: CommandId, extra: CommandOptions = {}): Promise<void> => {
@@ -71,16 +72,17 @@ export function registerCommands(): vscode.Disposable[] {
       return;
     }
     const settings = getSettings();
-    const outcome = runCommand("showStats", editor.document.getText(), {
-      gapThresholdSeconds: settings.gapThresholdSeconds,
-    });
+    const doc = store.get(editor.document);
+    const stats = computeStats(doc, settings.gapThresholdSeconds);
     channel.clear();
     channel.appendLine(`${editor.document.uri.fsPath}`);
-    for (const line of outcome.messages) {
+    for (const line of formatStatsReport(stats, settings.gapThresholdSeconds)) {
       channel.appendLine(line);
     }
     channel.show(true);
-    void vscode.window.showInformationMessage(outcome.messages.join("\n"));
+    void vscode.window.showInformationMessage(
+      formatStatsSummary(stats, settings.gapThresholdSeconds),
+    );
   };
 
   const registrations: Array<[string, () => Promise<void> | void]> = [
