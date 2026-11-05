@@ -11,7 +11,7 @@ Verification date: 2026-11-05. Reproduce with `npm ci && npm run verify`.*
 | Lint | `eslint .` (includes the *no `vscode` in `src/core/**`* guardrail) | ✅ 0 problems |
 | Format check | `prettier --check .` | ✅ clean |
 | Unit tests | `vitest run` | ✅ **81 passed** (5 files: time / parser / analyzer / services+commands / grammar) |
-| Bundle | `node esbuild.mjs` | ✅ `dist/extension.js` ≈ 41 KB bundle + sourcemap |
+| Bundle | `node esbuild.mjs` | ✅ `dist/extension.js` ≈ 42.3 KB (43,341 B) bundle + sourcemap |
 | Adapter smoke test | `node scripts/smoke-adapter.mjs` | ✅ activates the real bundle against a stubbed `vscode` module; asserts 7 commands + 4 providers + diagnostic collection + output channel register |
 | Package | `vsce package --no-dependencies` | ✅ `lrc-toolkit-0.1.0.vsix` — 12 files, **23,635 bytes ≈ 23.1 KB** |
 | JSON assets | `python -I -c "json.load(...)"` over grammar/snippets/language-config/launch/tasks | ✅ all parse |

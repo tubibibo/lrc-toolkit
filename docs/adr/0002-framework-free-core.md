@@ -25,7 +25,7 @@ The boundary is **enforced by ESLint** (`no-restricted-imports` rejecting `vscod
 
 ## Consequences
 
-- The whole feature set is unit-testable in plain Node (74 vitest tests, no editor download).
+- The whole feature set is unit-testable in plain Node (81 vitest tests, no editor download).
 - A future port to another host (Neovim via LSP, a web editor) reuses `src/core` as-is.
 - The adapter layer has little logic of its own, so it is covered by a headless smoke test of
   the real bundle (`scripts/smoke-adapter.mjs`) instead of Electron integration tests.
