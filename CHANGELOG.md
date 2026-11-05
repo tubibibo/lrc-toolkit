@@ -22,6 +22,9 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 - Expanding multi-timestamp lines no longer drops inline bracket content (`[Chorus]` and
   friends): such lines are skipped and reported instead of being silently rewritten.
 - Statistics report a zero duration for single-cue documents instead of "—".
+- Shifting by 0 ms (or any shift that leaves every timestamp unchanged) no longer emits edits
+  and reports "Nothing to shift" instead of dirtying the document; non-canonical stamps are
+  still canonicalized by the same command.
 
 ## [0.1.0] - 2026-11-05
 

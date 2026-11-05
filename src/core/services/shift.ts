@@ -31,10 +31,16 @@ export function shiftTimestamps(doc: LrcDocument, deltaMs: number): ShiftResult 
       if (raw < 0) {
         clampedCount++;
       }
+      const newText = renderStamp(doc, target.span, shifted, target.stamp.fractionDigits);
+      // Identical rendering (e.g. a zero shift on canonical stamps) is a no-op:
+      // emitting it would dirty the document for nothing.
+      if (doc.text.slice(target.span.start, target.span.end) === newText) {
+        continue;
+      }
       edits.push({
         start: target.span.start,
         end: target.span.end,
-        newText: renderStamp(doc, target.span, shifted, target.stamp.fractionDigits),
+        newText,
       });
     }
   }

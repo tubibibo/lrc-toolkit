@@ -78,6 +78,9 @@ export function runCommand(
       const delta = Math.trunc(options.deltaMs ?? 0);
       const { edits, clampedCount } = shiftTimestamps(doc, delta);
       const messages: string[] = [];
+      if (edits.length === 0) {
+        messages.push("Nothing to shift — every timestamp already matches the result.");
+      }
       if (clampedCount > 0) {
         messages.push(
           `${clampedCount} timestamp(s) were clamped to 00:00.00 — they would have gone negative.`,

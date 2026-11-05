@@ -88,6 +88,18 @@ describe("shiftTimestamps", () => {
     const { edits } = shiftTimestamps(parseDocument(text), 5000);
     expect(applyEdits(text, edits)).toBe("[00:15.00] <00:15.50>hello\n");
   });
+
+  it("skips timestamps the shift leaves unchanged", () => {
+    const outcome = runCommand("shiftTimestamps", "[00:10.00]a\n", { deltaMs: 0 });
+    expect(outcome.edits).toHaveLength(0);
+    expect(outcome.messages[0]).toContain("Nothing to shift");
+  });
+
+  it("still canonicalizes non-canonical stamps on a zero shift", () => {
+    const { edits } = shiftTimestamps(parseDocument("[1:2.5]a\n"), 0);
+    expect(edits).toHaveLength(1);
+    expect(edits[0]?.newText).toBe("[01:02.5]");
+  });
 });
 
 describe("applyOffsetTag", () => {
