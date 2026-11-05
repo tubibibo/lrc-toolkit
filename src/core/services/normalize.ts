@@ -46,6 +46,12 @@ export function normalizeSpacing(doc: LrcDocument, spaceAfterTimestamp: boolean)
       if (newText !== segment) {
         edits.push({ start: segmentStart, end: segmentEnd, newText });
       }
+    } else if (line.kind === "blank" && line.span.end > line.span.start) {
+      // Whitespace-only lines still count towards "no trailing whitespace".
+      const newText = doc.text.slice(line.span.start, line.span.end).replace(/[ \t]+$/, "");
+      if (newText !== doc.text.slice(line.span.start, line.span.end)) {
+        edits.push({ start: line.span.start, end: line.span.end, newText });
+      }
     } else if (line.kind === "tag" || line.kind === "unknown") {
       const segment = doc.text.slice(line.span.start, line.span.end);
       const newText = segment.replace(/[ \t]+$/, "");

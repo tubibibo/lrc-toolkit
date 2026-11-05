@@ -24,6 +24,8 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 - Statistics report a zero duration for single-cue documents instead of "—".
 - Timestamps accept minutes up to four digits across the parser, word timings and the grammar,
   so shifting a long file past 999 minutes does not produce output the parser would reject.
+- Formatting trims trailing whitespace on whitespace-only lines as well, matching the
+  documented "no trailing whitespace on any line" behavior.
 - Shifting by 0 ms (or any shift that leaves every timestamp unchanged) no longer emits edits
   and reports "Nothing to shift" instead of dirtying the document; non-canonical stamps are
   still canonicalized by the same command.

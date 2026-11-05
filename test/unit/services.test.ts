@@ -204,6 +204,12 @@ describe("normalizeSpacing", () => {
     const applied = applyEdits(text, edits);
     expect(applied).toBe("[00:01.00] text\n[ti:x]\n[00:02.00] tight\n");
   });
+
+  it("trims whitespace-only lines too", () => {
+    const text = "[00:01.00]a   \n   \n[ti:x]  \n";
+    const edits = normalizeSpacing(parseDocument(text), false);
+    expect(applyEdits(text, edits)).toBe("[00:01.00]a\n\n[ti:x]\n");
+  });
 });
 
 describe("stripWordTimings", () => {
