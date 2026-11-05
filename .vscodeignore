@@ -15,5 +15,6 @@ tsconfig.json
 .gitattributes
 .editorconfig
 .prettierrc.json
+.nvmrc
 .prettierignore
 **/*.map

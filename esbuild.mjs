@@ -2,7 +2,7 @@ import esbuild from "esbuild";
 
 const watch = process.argv.includes("--watch");
 
-/** Bundling options for the VS Code extension host (CommonJS, Node >= 18). */
+/** Bundling options for the VS Code extension host (CommonJS, Node >= 20). */
 const buildOptions = {
   entryPoints: ["src/vscode-host/extension.ts"],
   bundle: true,
@@ -10,7 +10,7 @@ const buildOptions = {
   external: ["vscode"],
   format: "cjs",
   platform: "node",
-  target: "node18",
+  target: "node20",
   sourcemap: true,
   minify: false,
   logLevel: "info",

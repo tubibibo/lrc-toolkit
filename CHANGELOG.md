@@ -53,6 +53,9 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ### Changed (tooling)
 
+- The supported Node floor is now `>=20` everywhere it is stated: `engines.node`, the esbuild
+  bundle target, a new `.nvmrc`, and the CI matrix (20/22). Previously `engines.node` said
+  `>=18` while nothing tested or type-checked Node 18.
 - `npm test` runs with V8 coverage and enforces thresholds (90/80/90) on the framework-free
   core; CI verifies on Node 20 and 22.
 - Shifting by 0 ms (or any shift that leaves every timestamp unchanged) no longer emits edits
