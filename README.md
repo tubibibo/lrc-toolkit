@@ -133,6 +133,10 @@ The packaged extension is ≈ 25.5 KB.
 
 [MIT](LICENSE)
 
+Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). Security
+issues are handled privately, see [SECURITY.md](SECURITY.md). This project
+adopts the [Contributor Covenant](CODE_OF_CONDUCT.md).
+
 ## 中文简介
 
 **LRC Toolkit** 是一个面向 LRC（同步歌词）文件的轻量级 VS Code 插件。LRC 是各大音乐播放器
