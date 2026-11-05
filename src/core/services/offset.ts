@@ -34,10 +34,7 @@ function applyOffsetTagLocation(doc: LrcDocument, location: OffsetTagLocation): 
     // Swallow the line's own terminator (which may differ from doc.eol in a
     // mixed-EOL document).
     const ending = doc.lineEndings[line.line] ?? "";
-    if (
-      ending.length > 0 &&
-      doc.text.slice(deleteEnd, deleteEnd + ending.length) === ending
-    ) {
+    if (ending.length > 0 && doc.text.slice(deleteEnd, deleteEnd + ending.length) === ending) {
       deleteEnd += ending.length;
     }
     return { start: line.span.start, end: deleteEnd, newText: "" };
