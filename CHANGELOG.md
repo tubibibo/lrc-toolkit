@@ -36,6 +36,9 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ### Changed
 
+- The package lockfile points at `registry.npmjs.org` instead of a regional
+  mirror, restoring reproducible installs and the npm audit endpoint. The
+  dependency tree and integrity hashes are unchanged.
 - The lightbulb only offers "Sort all lines by timestamp" when the timeline is actually broken
   (or when the Refactor menu explicitly asks for it).
 - Toolkit commands are hidden from the command palette for non-LRC files
