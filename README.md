@@ -1,6 +1,6 @@
 # LRC Toolkit
 
-[![CI](https://github.com/awwdd/lrc-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/awwdd/lrc-toolkit/actions/workflows/ci.yml)
+[![CI](https://github.com/tubibibo/lrc-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/tubibibo/lrc-toolkit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **A lightweight toolkit for editing LRC (synced lyrics) files in VS Code.**
@@ -8,8 +8,9 @@
 `.lrc` is the de-facto format for line-synced lyrics in music players (foobar2000, Poweramp,
 NetEase Cloud Music, foobar/mobile karaoke tools…), yet editor support for it is fragmented:
 the marketplace offers a single-purpose offset adjuster, an XLRC custom editor and a handful of
-"now playing" viewers — but no complete editing toolkit. LRC Toolkit fills that gap with a
-zero-dependency, well-tested extension. See [docs/research.md](docs/research.md) for the survey.
+"now playing" viewers — but as of late 2026, no comprehensive LRC editing toolkit was found on
+the Marketplace. LRC Toolkit fills that gap with a zero-dependency, well-tested extension.
+See [docs/research.md](docs/research.md) for the survey.
 
 > 简体中文简介见文末 [中文简介](#中文简介)。
 
@@ -31,7 +32,7 @@ zero-dependency, well-tested extension. See [docs/research.md](docs/research.md)
 
 | Command | Description |
 | --- | --- |
-| `LRC: Sort Lines by Timestamp` | Stable-sorts cue lines; tags stay on top; ties keep their order |
+| `LRC: Sort Lines by Timestamp` | Stable-sorts cue lines; tags stay on top; ties keep their order. Unrecognized lines and interior blank lines are removed — the result message reports how many |
 | `LRC: Shift All Timestamps…` | Shifts every timestamp by ±N ms (clamps at 00:00.00) |
 | `LRC: Apply [offset:] Tag into Timestamps` | Bakes the offset into raw timestamps and removes the tag |
 | `LRC: Normalize Timestamp Precision…` | Rewrites every timestamp to 2-digit (centiseconds) or 3-digit (milliseconds) precision |
@@ -112,15 +113,15 @@ scripts/             # icon generator and adapter smoke test
 docs/                # research, design notes, ADRs, verification report
 ```
 
-This layering lets the entire feature set run under Node (74 unit tests + a headless smoke test
+This layering lets the entire feature set run under Node (81 unit tests + a headless smoke test
 of the real esbuild bundle) without an editor runtime.
 
 ## Verification
 
 `npm run verify` runs the full gate: strict typecheck, ESLint (including the *no vscode in core*
-guardrail), Prettier, 74 unit tests, the esbuild bundle, the headless adapter smoke test and
+guardrail), Prettier, 81 unit tests, the esbuild bundle, the headless adapter smoke test and
 `vsce package`. Results are recorded in [docs/verification.md](docs/verification.md).
-The packaged extension is ~19 KB.
+The packaged extension is ≈ 23.1 KB.
 
 ## Roadmap
 
@@ -141,4 +142,4 @@ The packaged extension is ~19 KB.
 标签烘焙、精度归一化、逐词时间剥离、多时间戳行展开、文档统计与格式化。
 
 架构上采用“无框架核心 + 薄适配层”分层（核心层通过 ESLint 强制禁止依赖 `vscode`），
-零运行时依赖，打包后约 19 KB。详细设计见 [docs/design.md](docs/design.md)。
+零运行时依赖，打包后约 23.1 KB。详细设计见 [docs/design.md](docs/design.md)。

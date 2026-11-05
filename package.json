@@ -29,7 +29,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/awwdd/lrc-toolkit.git"
+    "url": "https://github.com/tubibibo/lrc-toolkit.git"
+  },
+  "homepage": "https://github.com/tubibibo/lrc-toolkit#readme",
+  "bugs": {
+    "url": "https://github.com/tubibibo/lrc-toolkit/issues"
   },
   "contributes": {
     "languages": [

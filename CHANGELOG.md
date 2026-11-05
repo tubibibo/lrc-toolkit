@@ -26,5 +26,15 @@ Initial release.
 - Document symbol provider (tags + cues in the outline) and document formatter.
 - Snippets: metadata header, timed line, word-timed line.
 - Settings: `lrcToolkit.gapThresholdSeconds`, `lrcToolkit.format.spaceAfterTimestamp`.
-- Framework-free core layer with 74 unit tests and a headless adapter smoke test;
-  zero runtime dependencies (packaged extension ≈ 19 KB).
+- Framework-free core layer with 81 unit tests and a headless adapter smoke test;
+  zero runtime dependencies (packaged extension ≈ 23.1 KB).
+
+### Fixed
+
+- Grammar now accepts single-digit seconds (`[01:5]`) and rejects `[key : value]` spacing
+  exactly like the analyzer; word timings follow the same rules
+  (guarded by a grammar ⇔ parser equivalence test).
+- `Sort Lines by Timestamp` reports how many blank/unrecognized lines the sort removed
+  instead of dropping them silently.
+- `Apply [offset:] Tag` reports leftover `[offset:]` tags when the file contains duplicates.
+- Mixed LF/CRLF line endings no longer shift diagnostics and hovers.
