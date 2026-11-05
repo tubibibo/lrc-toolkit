@@ -21,6 +21,7 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
   tags), hovers, outline symbols and statistics.
 - Expanding multi-timestamp lines no longer drops inline bracket content (`[Chorus]` and
   friends): such lines are skipped and reported instead of being silently rewritten.
+- Statistics report a zero duration for single-cue documents instead of "—".
 
 ## [0.1.0] - 2026-11-05
 

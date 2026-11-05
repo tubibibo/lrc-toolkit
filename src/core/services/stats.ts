@@ -60,7 +60,7 @@ export function computeStats(doc: LrcDocument, gapThresholdSeconds: number): Doc
   const firstTime = sorted[0];
   const lastTime = sorted[sorted.length - 1];
   const durationMs =
-    sorted.length > 1 && firstTime !== undefined && lastTime !== undefined
+    sorted.length > 0 && firstTime !== undefined && lastTime !== undefined
       ? lastTime - firstTime
       : null;
 

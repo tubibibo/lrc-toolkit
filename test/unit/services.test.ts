@@ -250,6 +250,15 @@ describe("computeStats", () => {
     expect(stats.gaps).toEqual([]);
   });
 
+  it("reports a zero duration for single-cue documents", () => {
+    const stats = computeStats(parseDocument("[00:10.00]a\n"), 8);
+    expect(stats.durationMs).toBe(0);
+    const report = formatStatsReport(stats, 8);
+    expect(report.some((line) => line.startsWith("Duration: 00:00.00 (00:10.00 → 00:10.00)"))).toBe(
+      true,
+    );
+  });
+
   it("formats a readable report", () => {
     const stats = computeStats(parseDocument(text), 8);
     const report = formatStatsReport(stats, 8);
