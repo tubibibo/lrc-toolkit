@@ -76,6 +76,12 @@ describe("shiftTimestamps", () => {
     expect(clampedCount).toBe(1);
     expect(edits.every((edit) => edit.newText === "[00:00.00]")).toBe(true);
   });
+
+  it("shifts word timings together with line stamps", () => {
+    const text = "[00:10.00] <00:10.50>hello\n";
+    const { edits } = shiftTimestamps(parseDocument(text), 5000);
+    expect(applyEdits(text, edits)).toBe("[00:15.00] <00:15.50>hello\n");
+  });
 });
 
 describe("applyOffsetTag", () => {
@@ -89,6 +95,12 @@ describe("applyOffsetTag", () => {
     const text = doc.text;
     const applied = applyEdits(text, result!.edits);
     expect(applied).toBe("[00:09.50]a\n[00:19.50]b\n");
+  });
+
+  it("bakes the offset into word timings too", () => {
+    const text = "[offset:+500]\n[00:10.00] <00:10.50>hello\n";
+    const result = applyOffsetTag(parseDocument(text));
+    expect(applyEdits(text, result!.edits)).toBe("[00:09.50] <00:10.00>hello\n");
   });
 
   it("returns null when no valid offset tag exists", () => {
@@ -120,6 +132,12 @@ describe("normalizePrecision", () => {
   it("produces no edits when already normalized", () => {
     const doc = parseDocument("[00:01.25]a\n[00:01.26]b\n");
     expect(normalizePrecision(doc, 2)).toHaveLength(0);
+  });
+
+  it("normalizes word-timing precision alongside line stamps", () => {
+    const text = "[00:10.000] <00:10.500>hello\n";
+    const edits = normalizePrecision(parseDocument(text), 2);
+    expect(applyEdits(text, edits)).toBe("[00:10.00] <00:10.50>hello\n");
   });
 });
 

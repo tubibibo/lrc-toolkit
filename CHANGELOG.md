@@ -4,6 +4,14 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- `Shift All Timestamps`, `Apply [offset:] Tag` and `Normalize Timestamp Precision` now include
+  enhanced (word-level) timings, so commands no longer leave word timings behind the new cue
+  positions.
+
 ## [0.1.0] - 2026-11-05
 
 Initial release.

@@ -3,21 +3,22 @@
  */
 
 import type { FractionDigits, LrcDocument, TextEdit } from "../model";
-import { formatStamp, roundToPrecision } from "../../util/time";
+import { roundToPrecision } from "../../util/time";
+import { renderStamp, stampTargets } from "./targets";
 
-/** Rewrite every timestamp onto a uniform fraction precision (2 or 3 digits). */
+/** Rewrite every timestamp — line stamps and word timings — onto a uniform precision. */
 export function normalizePrecision(doc: LrcDocument, fractionDigits: FractionDigits): TextEdit[] {
   const edits: TextEdit[] = [];
   for (const line of doc.lines) {
     if (line.kind !== "cue") {
       continue;
     }
-    for (const stampSpan of line.stamps) {
-      const target = roundToPrecision(stampSpan.stamp.totalMs, fractionDigits);
-      const newText = `[${formatStamp(target, fractionDigits)}]`;
-      const current = doc.text.slice(stampSpan.start, stampSpan.end);
+    for (const target of stampTargets(line)) {
+      const rounded = roundToPrecision(target.stamp.totalMs, fractionDigits);
+      const newText = renderStamp(doc, target.span, rounded, fractionDigits);
+      const current = doc.text.slice(target.span.start, target.span.end);
       if (current !== newText) {
-        edits.push({ start: stampSpan.start, end: stampSpan.end, newText });
+        edits.push({ start: target.span.start, end: target.span.end, newText });
       }
     }
   }

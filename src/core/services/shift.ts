@@ -1,5 +1,6 @@
 /**
- * Shift every raw timestamp by a fixed delta in milliseconds.
+ * Shift every raw timestamp — line stamps and enhanced word timings alike —
+ * by a fixed delta in milliseconds.
  *
  * Shifting is surgical (per-timestamp edits), re-renders timestamps in a
  * canonical `mm:ss.xx` form, and clamps negative results to 00:00.00.
@@ -8,7 +9,7 @@
  */
 
 import type { LrcDocument, TextEdit } from "../model";
-import { formatStamp } from "../../util/time";
+import { renderStamp, stampTargets } from "./targets";
 
 export interface ShiftResult {
   edits: TextEdit[];
@@ -24,16 +25,16 @@ export function shiftTimestamps(doc: LrcDocument, deltaMs: number): ShiftResult 
     if (line.kind !== "cue") {
       continue;
     }
-    for (const stampSpan of line.stamps) {
-      const raw = stampSpan.stamp.totalMs + deltaMs;
-      const target = Math.max(0, raw);
+    for (const target of stampTargets(line)) {
+      const raw = target.stamp.totalMs + deltaMs;
+      const shifted = Math.max(0, raw);
       if (raw < 0) {
         clampedCount++;
       }
       edits.push({
-        start: stampSpan.start,
-        end: stampSpan.end,
-        newText: `[${formatStamp(target, stampSpan.stamp.fractionDigits)}]`,
+        start: target.span.start,
+        end: target.span.end,
+        newText: renderStamp(doc, target.span, shifted, target.stamp.fractionDigits),
       });
     }
   }
