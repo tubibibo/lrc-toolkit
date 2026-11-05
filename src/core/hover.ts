@@ -3,7 +3,7 @@
  * structured information the adapter renders as markdown.
  */
 
-import type { LrcDocument, TimeStamp } from "./model";
+import type { BracketSpan, LrcDocument, TimeStamp } from "./model";
 import { allTags } from "./model";
 import { resolveOffset } from "./analyzer";
 
@@ -72,7 +72,7 @@ export function inspectAt(doc: LrcDocument, offset: number): HoverTarget | null 
     }
     for (const stampSpan of line.stamps) {
       if (contains(stampSpan.start, stampSpan.end, offset)) {
-        return buildTimestampHover(doc, line.line, stampSpan.stamp);
+        return buildTimestampHover(doc, stampSpan, stampSpan.stamp);
       }
     }
     const cueStart = line.stamps[0]?.stamp.totalMs;
@@ -86,22 +86,23 @@ export function inspectAt(doc: LrcDocument, offset: number): HoverTarget | null 
   return null;
 }
 
-function buildTimestampHover(doc: LrcDocument, lineIndex: number, stamp: TimeStamp): HoverTarget {
+function buildTimestampHover(doc: LrcDocument, span: BracketSpan, stamp: TimeStamp): HoverTarget {
   const offsetMs = resolveOffset(doc, []);
 
-  // Effective first-stamp times of every cue line, in document order.
-  const timeline: Array<{ line: number; ms: number }> = [];
+  // Every stamp in the document, in document order. On multi-timestamp lines
+  // this makes prev/next refer to the adjacent stamp (same line first),
+  // not to the previous line's first stamp.
+  const timeline: Array<{ start: number; ms: number }> = [];
   for (const entry of doc.lines) {
     if (entry.kind !== "cue") {
       continue;
     }
-    const first = entry.stamps[0];
-    if (first) {
-      timeline.push({ line: entry.line, ms: first.stamp.totalMs - offsetMs });
+    for (const stampSpan of entry.stamps) {
+      timeline.push({ start: stampSpan.start, ms: stampSpan.stamp.totalMs - offsetMs });
     }
   }
 
-  const ownIndex = timeline.findIndex((entry) => entry.line === lineIndex);
+  const ownIndex = timeline.findIndex((entry) => entry.start === span.start);
   const prev = ownIndex > 0 ? (timeline[ownIndex - 1]?.ms ?? null) : null;
   const next =
     ownIndex >= 0 && ownIndex < timeline.length - 1 ? (timeline[ownIndex + 1]?.ms ?? null) : null;

@@ -38,6 +38,9 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
   (`resourceLangId == lrc`).
 - Document statistics show a one-line summary in the message toast; the full report stays in
   the `LRC Toolkit` output channel.
+- Timestamp hovers on multi-timestamp lines now measure the delta and gap against the
+  adjacent stamp in document order (same line first), instead of always using the previous
+  line's first stamp.
 - Shifting by 0 ms (or any shift that leaves every timestamp unchanged) no longer emits edits
   and reports "Nothing to shift" instead of dirtying the document; non-canonical stamps are
   still canonicalized by the same command.

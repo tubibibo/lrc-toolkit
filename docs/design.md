@@ -104,6 +104,15 @@ Known residual: a leading `[01:]` renders red but only warns (`unrecognized-toke
 loose "stamp-like" heuristic requires digits after the colon; the same token inside lyric text
 stays silent. Tolerated — both indicate the same typo to the user.
 
+## Hover semantics
+
+Timestamp hovers show absolute time, effective time (offset-adjusted), the delta to the
+**previous stamp** and the gap to the **next stamp**, both taken in **document-wide stamp
+order**: on a multi-timestamp line, hovering the second stamp refers to the first stamp of the
+same line, not to the previous line's first stamp. Word-timing hovers are relative to their
+line's first stamp. Tag hovers resolve the exact token under the cursor, including tags that
+share a line.
+
 ## Offset semantics (ADR 0004)
 
 `display time = timestamp − offset` with a **positive** offset making lyrics appear **earlier**
