@@ -19,8 +19,12 @@ import { looksLikeStampBody, parseStampBody } from "../util/time";
 
 /** Valid enhanced-LRC word timings: `<mm:ss.xx>`. */
 const WORD_TIMING = /<(\d{1,3}:\d{1,2}(?:\.\d{1,3})?)>/g;
-/** `<...>` shaped tokens used to spot malformed word timings. */
-const WORD_TIMING_LIKE = /<[^<>\n]{1,24}>/g;
+/**
+ * `<...>` tokens that are *timing-shaped* (start with 1–4 digits and a colon)
+ * but failed the valid pattern above. Angle brackets without that shape —
+ * `<2>`, `<b>`, `I <3 you` — are lyric text, never timings.
+ */
+const WORD_TIMING_LIKE = /<\d{1,4}:[^<>\n]{0,22}>/g;
 const TAG_KEY = /^[A-Za-z][A-Za-z0-9]*$/;
 
 interface RawLine {

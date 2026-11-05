@@ -95,12 +95,21 @@ describe("parseDocument", () => {
     expect(line.invalidWordTimings).toHaveLength(0);
   });
 
-  it("flags malformed word timings separately", () => {
-    const doc = parseDocument("[00:10.00] <ab> x");
+  it("flags timing-shaped malformed word timings separately", () => {
+    const doc = parseDocument("[00:10.00] <00:60> x");
     const line = doc.lines[0];
     if (line?.kind !== "cue") return expect.fail();
     expect(line.wordTimings).toHaveLength(0);
     expect(line.invalidWordTimings).toHaveLength(1);
+  });
+
+  it("keeps non-timing angle brackets as plain text", () => {
+    const doc = parseDocument("[00:20.00]第<2>段\n[00:30.00]a <b> c\n[00:40.00]I <3 you\n");
+    for (const line of doc.lines) {
+      if (line.kind !== "cue") continue;
+      expect(line.invalidWordTimings).toHaveLength(0);
+      expect(line.text.includes("<")).toBe(true);
+    }
   });
 
   it("handles CRLF documents", () => {

@@ -165,10 +165,17 @@ describe("stripWordTimings", () => {
     expect(applyEdits(text, edits)).toBe("[00:10.00]word end\n");
   });
 
-  it("removes malformed word timings too", () => {
-    const text = "[00:10.00]<ab>x\n";
+  it("removes timing-shaped malformed word timings too", () => {
+    const text = "[00:10.00]<00:60>x\n";
     const { edits } = stripWordTimings(parseDocument(text));
     expect(applyEdits(text, edits)).toBe("[00:10.00]x\n");
+  });
+
+  it("keeps lyrics containing non-timing angle brackets intact", () => {
+    const text = "[00:20.00]第<2>段 <b> I <3 you\n";
+    const { edits, lineCount } = stripWordTimings(parseDocument(text));
+    expect(lineCount).toBe(0);
+    expect(edits).toHaveLength(0);
   });
 });
 

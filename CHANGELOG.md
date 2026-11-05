@@ -11,6 +11,9 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 - `Shift All Timestamps`, `Apply [offset:] Tag` and `Normalize Timestamp Precision` now include
   enhanced (word-level) timings, so commands no longer leave word timings behind the new cue
   positions.
+- Angle brackets that are not timing-shaped (`第<2>段`, `a <b> c`, `I <3 you`) are kept as lyric
+  text instead of being flagged as malformed timings and stripped by `Strip Word Timings`;
+  only `<digits:…>` tokens are treated as timing attempts.
 
 ## [0.1.0] - 2026-11-05
 

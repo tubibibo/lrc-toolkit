@@ -109,9 +109,14 @@ describe("analyze", () => {
     expect(issue.code).toBe("word-timing-disorder");
   });
 
-  it("warns about malformed word timings", () => {
-    const issue = firstIssue("[00:10.00] <ab>");
+  it("warns about timing-shaped malformed word timings", () => {
+    const issue = firstIssue("[00:10.00] <00:60>");
     expect(issue.code).toBe("invalid-word-timing");
+  });
+
+  it("stays silent about angle brackets that are not timing-shaped", () => {
+    expect(codesOf("[00:10.00] <ab>")).not.toContain("invalid-word-timing");
+    expect(codesOf("[00:20.00]第<2>段")).not.toContain("invalid-word-timing");
   });
 
   it("stays silent on a clean document", () => {
