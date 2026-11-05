@@ -4,6 +4,7 @@
  */
 
 import type { LrcDocument, TimeStamp } from "./model";
+import { allTags } from "./model";
 import { resolveOffset } from "./analyzer";
 
 export type HoverTarget =
@@ -49,6 +50,16 @@ export function inspectAt(doc: LrcDocument, offset: number): HoverTarget | null 
       continue;
     }
     if (line.kind === "tag") {
+      for (const tag of allTags(line)) {
+        if (contains(tag.span.start, tag.span.end, offset)) {
+          return {
+            kind: "tag",
+            key: tag.key,
+            value: tag.value,
+            description: describeTag(tag.key) ?? "Metadata tag.",
+          };
+        }
+      }
       return {
         kind: "tag",
         key: line.key,

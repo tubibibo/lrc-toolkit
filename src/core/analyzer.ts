@@ -17,6 +17,7 @@
  */
 
 import type { CueLine, LrcDiagnostic, LrcDocument, TagLine } from "./model";
+import { allTags } from "./model";
 import { parseStampBody } from "../util/time";
 
 export const OFFSET_VALUE = /^[+-]?\d+$/;
@@ -31,38 +32,44 @@ function effectiveMs(stampTotalMs: number, offsetMs: number): number {
 
 /**
  * Resolve the file-wide `[offset:]` value in milliseconds, reporting
- * malformed or duplicated tags along the way. The first valid tag wins.
+ * malformed or duplicated tags along the way. The first valid tag wins,
+ * in document order — across lines and within a line.
  */
 export function resolveOffset(doc: LrcDocument, issues: LrcDiagnostic[]): number {
   let resolved = 0;
   let seenValid = false;
   for (const line of doc.lines) {
-    if (line.kind !== "tag" || line.key !== "offset") {
+    if (line.kind !== "tag") {
       continue;
     }
-    if (!OFFSET_VALUE.test(line.value.trim())) {
-      issues.push({
-        start: line.valueSpan.start,
-        end: line.valueSpan.end,
-        severity: "error",
-        code: "invalid-offset",
-        message:
-          "The [offset:] tag must be an integer number of milliseconds, e.g. [offset:+500] or [offset:-250].",
-      });
-      continue;
+    for (const tag of allTags(line)) {
+      if (tag.key !== "offset") {
+        continue;
+      }
+      if (!OFFSET_VALUE.test(tag.value.trim())) {
+        issues.push({
+          start: tag.valueSpan.start,
+          end: tag.valueSpan.end,
+          severity: "error",
+          code: "invalid-offset",
+          message:
+            "The [offset:] tag must be an integer number of milliseconds, e.g. [offset:+500] or [offset:-250].",
+        });
+        continue;
+      }
+      if (seenValid) {
+        issues.push({
+          start: tag.span.start,
+          end: tag.span.end,
+          severity: "warning",
+          code: "duplicate-offset",
+          message: "More than one [offset:] tag — players typically only honour the first one.",
+        });
+        continue;
+      }
+      seenValid = true;
+      resolved = Number(tag.value.trim());
     }
-    if (seenValid) {
-      issues.push({
-        start: line.span.start,
-        end: line.span.end,
-        severity: "warning",
-        code: "duplicate-offset",
-        message: "More than one [offset:] tag — players typically only honour the first one.",
-      });
-      continue;
-    }
-    seenValid = true;
-    resolved = Number(line.value.trim());
   }
   return resolved;
 }
@@ -193,14 +200,16 @@ function analyzeCue(
 }
 
 function analyzeTag(line: TagLine, issues: LrcDiagnostic[]): void {
-  if (CONTENT_TAGS.has(line.key) && line.value.trim() === "") {
-    issues.push({
-      start: line.valueSpan.start,
-      end: line.valueSpan.end,
-      severity: "info",
-      code: "empty-tag-value",
-      message: `The [${line.key}:] tag carries no value.`,
-    });
+  for (const tag of allTags(line)) {
+    if (CONTENT_TAGS.has(tag.key) && tag.value.trim() === "") {
+      issues.push({
+        start: tag.valueSpan.start,
+        end: tag.valueSpan.end,
+        severity: "info",
+        code: "empty-tag-value",
+        message: `The [${tag.key}:] tag carries no value.`,
+      });
+    }
   }
 }
 

@@ -92,12 +92,32 @@ export interface TagLine {
   kind: "tag";
   line: number;
   span: BracketSpan;
+  /** Span of the primary (first) tag token on the line. */
+  primarySpan: BracketSpan;
   /** Raw tag key as written, e.g. `Ti`. */
   rawKey: string;
   /** Lower-cased tag key, e.g. `ti`, `offset`. */
   key: string;
   value: string;
   /** Absolute span of the value part (between `:` and `]`). */
+  valueSpan: BracketSpan;
+  /** Further tag tokens sharing the line, in document order. */
+  additional: TagToken[];
+}
+
+/** Every tag token on a tag line: the primary first, then the additional ones. */
+export function allTags(line: TagLine): TagToken[] {
+  return [
+    { span: line.primarySpan, key: line.key, value: line.value, valueSpan: line.valueSpan },
+    ...line.additional,
+  ];
+}
+
+/** One `[key:value]` token, with its own span (a line may carry several). */
+export interface TagToken {
+  span: BracketSpan;
+  key: string;
+  value: string;
   valueSpan: BracketSpan;
 }
 

@@ -9,6 +9,7 @@ export type {
   CueLine,
   DiagnosticFix,
   DocumentStats,
+  Eol,
   FractionDigits,
   InstrumentalGap,
   LrcDiagnostic,
@@ -16,6 +17,7 @@ export type {
   LrcLine,
   Severity,
   TagLine,
+  TagToken,
   TextEdit,
   TimeStamp,
   TimestampSpan,
@@ -24,6 +26,7 @@ export type {
   WordTiming,
 } from "./model";
 
+export { allTags } from "./model";
 export { analyze, resolveOffset } from "./analyzer";
 export { parseDocument, rawLineText } from "./parser";
 export { describeTag, inspectAt } from "./hover";

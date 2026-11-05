@@ -6,7 +6,8 @@
  * once the tag is gone.
  */
 
-import type { LrcDocument, TextEdit } from "../model";
+import type { LrcDocument, TagLine, TagToken, TextEdit } from "../model";
+import { allTags } from "../model";
 import { OFFSET_VALUE, resolveOffset } from "../analyzer";
 import { shiftTimestamps } from "./shift";
 
@@ -19,30 +20,57 @@ export interface ApplyOffsetResult {
   remainingOffsetTags: number;
 }
 
+interface OffsetTagLocation {
+  line: TagLine;
+  tag: TagToken;
+}
+
+function applyOffsetTagLocation(doc: LrcDocument, location: OffsetTagLocation): TextEdit {
+  const { line, tag } = location;
+  // Whole-line removal only when the baked tag is alone on its line;
+  // otherwise remove just the token so sibling tags survive.
+  if (line.additional.length === 0 && line.primarySpan.start === tag.span.start) {
+    let deleteEnd = line.span.end;
+    if (doc.text.slice(deleteEnd, deleteEnd + doc.eol.length) === doc.eol) {
+      deleteEnd += doc.eol.length;
+    }
+    return { start: line.span.start, end: deleteEnd, newText: "" };
+  }
+  return { start: tag.span.start, end: tag.span.end, newText: "" };
+}
+
 export function applyOffsetTag(doc: LrcDocument): ApplyOffsetResult | null {
   const offsetMs = resolveOffset(doc, []);
-  const validOffsetTags = doc.lines.filter(
-    (line) => line.kind === "tag" && line.key === "offset" && OFFSET_VALUE.test(line.value.trim()),
-  );
-  const tagLine = validOffsetTags[0];
-  if (!tagLine || tagLine.kind !== "tag") {
+
+  // First valid `[offset:]` in document order — across lines and within a line.
+  let location: OffsetTagLocation | null = null;
+  let validCount = 0;
+  for (const line of doc.lines) {
+    if (line.kind !== "tag") {
+      continue;
+    }
+    for (const tag of allTags(line)) {
+      if (tag.key !== "offset" || !OFFSET_VALUE.test(tag.value.trim())) {
+        continue;
+      }
+      validCount++;
+      if (!location) {
+        location = { line, tag };
+      }
+    }
+  }
+  if (!location) {
     return null;
   }
 
   const shift = shiftTimestamps(doc, -offsetMs);
-
-  // Delete the tag together with its trailing line break (if any).
-  let deleteEnd = tagLine.span.end;
-  if (doc.text.slice(deleteEnd, deleteEnd + doc.eol.length) === doc.eol) {
-    deleteEnd += doc.eol.length;
-  }
-  const deleteEdit: TextEdit = { start: tagLine.span.start, end: deleteEnd, newText: "" };
+  const deleteEdit = applyOffsetTagLocation(doc, location);
 
   return {
     edits: [...shift.edits, deleteEdit],
     shiftedCount: shift.edits.length,
     clampedCount: shift.clampedCount,
     offsetMs,
-    remainingOffsetTags: validOffsetTags.length - 1,
+    remainingOffsetTags: validCount - 1,
   };
 }

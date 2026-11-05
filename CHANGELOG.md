@@ -16,6 +16,9 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
   only `<digits:…>` tokens are treated as timing attempts.
 - CR-only and mixed line-ending documents keep their original line endings through sorting and
   offset baking instead of being rewritten to LF or leaving stray carriage returns.
+- Metadata tags sharing a line (`[ti:x][offset:+500]`) are recognized everywhere now —
+  offset resolution, `Apply [offset:] Tag` (which removes only the token, keeping sibling
+  tags), hovers, outline symbols and statistics.
 
 ## [0.1.0] - 2026-11-05
 

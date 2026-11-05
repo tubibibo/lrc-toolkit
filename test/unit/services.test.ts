@@ -9,6 +9,7 @@ import { expandMultiStampLines, stripWordTimings } from "../../src/core/services
 import { computeStats, formatStatsReport } from "../../src/core/services/stats";
 import { runCommand } from "../../src/core/commands";
 import { isCommandId } from "../../src/core/commands";
+import { analyze } from "../../src/core/analyzer";
 
 describe("sortCues", () => {
   it("sorts cues and keeps tags first, preserving stable ties", () => {
@@ -117,6 +118,24 @@ describe("applyOffsetTag", () => {
     const text = "[offset:+500]\r[00:10.00]a\r";
     const result = applyOffsetTag(parseDocument(text));
     expect(applyEdits(text, result!.edits)).toBe("[00:09.50]a\r");
+  });
+
+  it("applies an offset tag that shares a line with another tag", () => {
+    const text = "[ti:x][offset:+500]\n[00:10.00]a\n";
+    const result = applyOffsetTag(parseDocument(text));
+    expect(result?.offsetMs).toBe(500);
+    // Only the offset token is removed; [ti:x] survives on the same line.
+    expect(applyEdits(text, result!.edits)).toBe("[ti:x]\n[00:09.50]a\n");
+  });
+
+  it("reports duplicates when several offset tags share one line", () => {
+    const text = "[offset:+500][offset:+600]\n[00:10.00]a\n";
+    const result = applyOffsetTag(parseDocument(text));
+    expect(result?.offsetMs).toBe(500);
+    expect(result?.remainingOffsetTags).toBe(1);
+    expect(applyEdits(text, result!.edits)).toBe("[offset:+600]\n[00:09.50]a\n");
+    const issues = analyze(parseDocument(text));
+    expect(issues.filter((issue) => issue.code === "duplicate-offset")).toHaveLength(1);
   });
 
   it("bakes the first offset tag and reports leftover duplicates", () => {

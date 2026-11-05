@@ -12,6 +12,7 @@ import type {
   Eol,
   LrcDocument,
   LrcLine,
+  TagToken,
   TimestampSpan,
   Token,
   WordTiming,
@@ -158,14 +159,31 @@ function buildLine(raw: RawLine, index: number): LrcLine {
   }
 
   if (first && first.classification === "tag") {
+    // A line may carry several tags ([ti:x][offset:+500]); collect the rest.
+    const additional: TagToken[] = [];
+    for (let i = 1; i < tokens.length; i++) {
+      const token = tokens[i];
+      if (token?.classification === "tag") {
+        additional.push({
+          span: { start: token.start, end: token.end },
+          key: token.key ?? "",
+          value: token.value ?? "",
+          valueSpan: token.valueSpan ?? { start: token.start, end: token.end },
+        });
+      }
+      // Non-tag tokens after the primary tag are tolerated silently (kept
+      // as-is by surgical edits).
+    }
     return {
       kind: "tag",
       line: index,
       span: { start: raw.start, end: raw.end },
+      primarySpan: { start: first.start, end: first.end },
       rawKey: first.key ?? "",
       key: first.key ?? "",
       value: first.value ?? "",
       valueSpan: first.valueSpan ?? { start: raw.start, end: raw.end },
+      additional,
     };
   }
 

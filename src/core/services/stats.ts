@@ -3,6 +3,7 @@
  */
 
 import type { DocumentStats, InstrumentalGap, LrcDocument } from "../model";
+import { allTags } from "../model";
 import { resolveOffset } from "../analyzer";
 import { formatClock, formatDuration } from "../../util/time";
 
@@ -19,7 +20,7 @@ export function computeStats(doc: LrcDocument, gapThresholdSeconds: number): Doc
 
   for (const line of doc.lines) {
     if (line.kind === "tag") {
-      tagCount++;
+      tagCount += allTags(line).length;
       continue;
     }
     if (line.kind !== "cue") {
