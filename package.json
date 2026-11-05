@@ -129,6 +129,15 @@
           "when": "resourceLangId == lrc",
           "group": "lrcToolkit@3"
         }
+      ],
+      "commandPalette": [
+        { "command": "lrcToolkit.sortByTimestamp", "when": "resourceLangId == lrc" },
+        { "command": "lrcToolkit.shiftTimestamps", "when": "resourceLangId == lrc" },
+        { "command": "lrcToolkit.applyOffsetTag", "when": "resourceLangId == lrc" },
+        { "command": "lrcToolkit.normalizePrecision", "when": "resourceLangId == lrc" },
+        { "command": "lrcToolkit.stripWordTimings", "when": "resourceLangId == lrc" },
+        { "command": "lrcToolkit.expandMultiStampLines", "when": "resourceLangId == lrc" },
+        { "command": "lrcToolkit.showStats", "when": "resourceLangId == lrc" }
       ]
     }
   },
