@@ -19,6 +19,8 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 - Metadata tags sharing a line (`[ti:x][offset:+500]`) are recognized everywhere now —
   offset resolution, `Apply [offset:] Tag` (which removes only the token, keeping sibling
   tags), hovers, outline symbols and statistics.
+- Expanding multi-timestamp lines no longer drops inline bracket content (`[Chorus]` and
+  friends): such lines are skipped and reported instead of being silently rewritten.
 
 ## [0.1.0] - 2026-11-05
 

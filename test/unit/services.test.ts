@@ -220,6 +220,16 @@ describe("expandMultiStampLines", () => {
   it("ignores single-stamp lines", () => {
     expect(expandMultiStampLines(parseDocument("[00:01.00]a\n")).lineCount).toBe(0);
   });
+
+  it("refuses to expand lines carrying inline bracket content", () => {
+    const text = "[00:01.00][Chorus][00:02.00]text\n";
+    const { edits, lineCount, skippedCount } = expandMultiStampLines(parseDocument(text));
+    expect(edits).toHaveLength(0);
+    expect(lineCount).toBe(0);
+    expect(skippedCount).toBe(1);
+    const outcome = runCommand("expandMultiStampLines", text);
+    expect(outcome.messages.some((message) => message.includes("Skipped 1 line"))).toBe(true);
+  });
 });
 
 describe("computeStats", () => {

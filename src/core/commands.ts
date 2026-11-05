@@ -128,14 +128,20 @@ export function runCommand(
     }
 
     case "expandMultiStampLines": {
-      const { edits, lineCount } = expandMultiStampLines(doc);
-      return {
-        edits,
-        messages:
-          lineCount === 0
-            ? ["No multi-timestamp lines found."]
-            : [`Expanded ${lineCount} line(s).`],
-      };
+      const { edits, lineCount, skippedCount } = expandMultiStampLines(doc);
+      const messages: string[] = [];
+      if (lineCount > 0) {
+        messages.push(`Expanded ${lineCount} line(s).`);
+      }
+      if (skippedCount > 0) {
+        messages.push(
+          `Skipped ${skippedCount} line(s) with inline bracket content — expand them manually.`,
+        );
+      }
+      if (messages.length === 0) {
+        messages.push("No multi-timestamp lines found.");
+      }
+      return { edits, messages };
     }
 
     case "showStats": {

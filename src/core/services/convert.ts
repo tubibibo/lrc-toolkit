@@ -9,6 +9,8 @@ import type { LrcDocument, TextEdit } from "../model";
 export interface ConvertResult {
   edits: TextEdit[];
   lineCount: number;
+  /** Lines that were multi-stamp but not expanded (inline bracket content present). */
+  skippedCount: number;
 }
 
 /** Remove `<mm:ss.xx>` word timings (valid and malformed) from cue text. */
@@ -41,16 +43,27 @@ export function stripWordTimings(doc: LrcDocument): ConvertResult {
       edits.push({ start: line.textStart, end: line.textEnd, newText });
     }
   }
-  return { edits, lineCount };
+  return { edits, lineCount, skippedCount: 0 };
 }
 
-/** Expand `[a][b] text` into `[a] text` + `[b] text` on consecutive lines. */
+/**
+ * Expand `[a][b] text` into `[a] text` + `[b] text` on consecutive lines.
+ *
+ * Lines whose text region carries other bracket content (stray tokens such as
+ * `[Chorus]`) are refused: expanding them cannot decide where that content
+ * belongs, and silently dropping it would lose lyrics.
+ */
 export function expandMultiStampLines(doc: LrcDocument): ConvertResult {
   const edits: TextEdit[] = [];
   let lineCount = 0;
+  let skippedCount = 0;
 
   for (const line of doc.lines) {
     if (line.kind !== "cue" || line.stamps.length < 2) {
+      continue;
+    }
+    if (line.strayTokens.length > 0) {
+      skippedCount++;
       continue;
     }
     const lastStamp = line.stamps[line.stamps.length - 1];
@@ -68,5 +81,5 @@ export function expandMultiStampLines(doc: LrcDocument): ConvertResult {
     });
     lineCount++;
   }
-  return { edits, lineCount };
+  return { edits, lineCount, skippedCount };
 }
