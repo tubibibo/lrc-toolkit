@@ -6,6 +6,8 @@
     { "include": "#metadata-tag" },
     { "include": "#timestamp" },
     { "include": "#word-timing" },
+    { "include": "#section-label" },
+    { "include": "#word-timing-invalid" },
     { "include": "#invalid-bracket" }
   ],
   "repository": {
@@ -28,9 +30,19 @@
       "match": "<\\d{1,4}:[0-5]?\\d(?:\\.\\d{1,3})?>",
       "name": "constant.numeric.word-timing.lrc"
     },
+    "section-label": {
+      "comment": "Bracketed content that is NOT timing-shaped: section labels like [Chorus] and annotations like [foo:bar]. Rendered neutrally — the analyzer treats these as lyric text, never as errors.",
+      "match": "\\[(?!\\d{1,4}:)[^\\[\\]\\n]*\\]",
+      "name": "entity.name.section.lrc"
+    },
+    "word-timing-invalid": {
+      "comment": "Timing-shaped <...> tokens that failed the valid word-timing rule, e.g. <00:60>.",
+      "match": "<\\d{1,4}:[^<>\n]{0,22}>",
+      "name": "invalid.illegal.bracket.lrc"
+    },
     "invalid-bracket": {
-      "comment": "Anything bracket-like that failed the patterns above.",
-      "match": "\\[[^\\]\\n]*\\]|<[^<>\n]*>",
+      "comment": "Timing-shaped [...] tokens that failed the valid timestamp rule, e.g. [01:60]. Non-timing brackets are section labels, not errors.",
+      "match": "\\[\\d{1,4}:[^\\]\\n]*\\]",
       "name": "invalid.illegal.bracket.lrc"
     }
   }

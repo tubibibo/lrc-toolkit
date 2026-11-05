@@ -103,6 +103,15 @@ describe("parseDocument", () => {
     expect(line.invalidWordTimings).toHaveLength(1);
   });
 
+  it("collects stamp-shaped inline brackets but tolerates labels", () => {
+    const doc = parseDocument("[00:10.00]hello [01:60] [Chorus] world");
+    const line = doc.lines[0];
+    if (line?.kind !== "cue") return expect.fail();
+    expect(line.invalidInlineStamps).toHaveLength(1);
+    const span = line.invalidInlineStamps[0]!;
+    expect(doc.text.slice(span.start, span.end)).toBe("[01:60]");
+  });
+
   it("keeps non-timing angle brackets as plain text", () => {
     const doc = parseDocument("[00:20.00]第<2>段\n[00:30.00]a <b> c\n[00:40.00]I <3 you\n");
     for (const line of doc.lines) {

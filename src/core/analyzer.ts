@@ -101,6 +101,16 @@ function analyzeCue(
       message: "Malformed word timing — enhanced LRC word timings look like <00:12.30>.",
     });
   }
+  for (const span of line.invalidInlineStamps) {
+    issues.push({
+      start: span.start,
+      end: span.end,
+      severity: "error",
+      code: "invalid-timestamp",
+      message:
+        "Malformed timestamp inside the lyric text — seconds must stay within 0–59, e.g. [01:23.45].",
+    });
+  }
 
   if (line.stamps.length === 0) {
     return;

@@ -23,6 +23,9 @@ const grammar = JSON.parse(
 const timestampPattern = new RegExp(grammar.repository.timestamp!.match);
 const wordTimingPattern = new RegExp(grammar.repository["word-timing"]!.match);
 const tagPattern = new RegExp(grammar.repository["metadata-tag"]!.match);
+const labelPattern = new RegExp(grammar.repository["section-label"]!.match);
+const wordTimingInvalidPattern = new RegExp(grammar.repository["word-timing-invalid"]!.match);
+const invalidBracketPattern = new RegExp(grammar.repository["invalid-bracket"]!.match);
 
 /** Parser ground truth for a bracket token body. */
 function parserAccepts(body: string): boolean {
@@ -68,5 +71,30 @@ describe("grammar ⇔ parser consistency", () => {
     expect(tagPattern.test("[offset:+500]")).toBe(true);
     expect(tagPattern.test("[ti:]")).toBe(true);
     expect(tagPattern.test("[ti : x]")).toBe(false);
+  });
+
+  it("renders non-timing bracket labels neutrally, never red", () => {
+    for (const token of ["[Chorus]", "[foo:bar]", "[abc]"]) {
+      expect(labelPattern.test(token)).toBe(true);
+      expect(invalidBracketPattern.test(token)).toBe(false);
+    }
+  });
+
+  it("keeps red reserved for timing-shaped malformed brackets", () => {
+    for (const token of ["[01:60]", "[01:02.1234]", "[1:2:3]"]) {
+      expect(invalidBracketPattern.test(token)).toBe(true);
+      expect(labelPattern.test(token)).toBe(false);
+    }
+    // <00:60> is timing-shaped but fails the valid rule → falls to the invalid one.
+    expect(wordTimingPattern.test("<00:60>")).toBe(false);
+    expect(wordTimingInvalidPattern.test("<00:60>")).toBe(true);
+    // Valid word timings are consumed by the valid rule (listed first) before
+    // the invalid rule can ever see them.
+    expect(wordTimingPattern.test("<00:10.50>")).toBe(true);
+    // Non-timing brackets are plain text for both rules.
+    for (const token of ["<b>", "<2>"]) {
+      expect(wordTimingInvalidPattern.test(token)).toBe(false);
+      expect(wordTimingPattern.test(token)).toBe(false);
+    }
   });
 });

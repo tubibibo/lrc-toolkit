@@ -99,6 +99,17 @@ describe("analyze", () => {
     expect(issue.severity).toBe("info");
   });
 
+  it("flags malformed timestamps buried in lyric text", () => {
+    const issue = firstIssue("[00:10.00]hello [01:60] world");
+    expect(issue.code).toBe("invalid-timestamp");
+    expect(issue.severity).toBe("error");
+  });
+
+  it("tolerates letter-only and tag-shaped labels inside lyric text", () => {
+    expect(codesOf("[00:01.00] [Chorus]")).toEqual([]);
+    expect(codesOf("[00:01.00]x [foo:bar] y")).toEqual([]);
+  });
+
   it("warns about word timings before their cue start", () => {
     const issue = firstIssue("[00:10.00] <00:09.00>word");
     expect(issue.code).toBe("word-timing-before-cue");

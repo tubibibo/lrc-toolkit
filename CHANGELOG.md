@@ -26,6 +26,9 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
   so shifting a long file past 999 minutes does not produce output the parser would reject.
 - Formatting trims trailing whitespace on whitespace-only lines as well, matching the
   documented "no trailing whitespace on any line" behavior.
+- Malformed timestamps buried inside lyric text (`hello [01:60] world`) now get diagnostics,
+  and the grammar reserves red for timing-shaped brackets only: section labels like
+  `[Chorus]` render neutrally instead of red.
 - Shifting by 0 ms (or any shift that leaves every timestamp unchanged) no longer emits edits
   and reports "Nothing to shift" instead of dirtying the document; non-canonical stamps are
   still canonicalized by the same command.

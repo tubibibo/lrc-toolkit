@@ -86,6 +86,8 @@ export interface CueLine {
   wordTimings: WordTiming[];
   /** `<...>` tokens that look like word timings but failed to parse. */
   invalidWordTimings: BracketSpan[];
+  /** Stamp-shaped `[...]` tokens inside the lyric text (malformed timestamps). */
+  invalidInlineStamps: BracketSpan[];
 }
 
 export interface TagLine {

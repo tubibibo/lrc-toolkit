@@ -72,7 +72,7 @@ Rules that make the layering enforceable, not aspirational:
 
 | Code | Severity | Trigger |
 | --- | --- | --- |
-| `invalid-timestamp` | error | Bracket token looks like a timestamp but is malformed (seconds > 59, 4-digit fraction, garbage) |
+| `invalid-timestamp` | error | Bracket token looks like a timestamp but is malformed (seconds > 59, 4-digit fraction, garbage) — as a leading token, a stray token, **or buried in lyric text** |
 | `invalid-offset` | error | `[offset:]` value not an integer (`[offset:abc]`, `[offset:]`) |
 | `unrecognized-token` | warning | Leading bracket token is neither stamp nor tag |
 | `stray-line` | warning | Line with neither brackets nor timestamps |
@@ -80,10 +80,29 @@ Rules that make the layering enforceable, not aspirational:
 | `duplicate-offset` | warning | Second valid `[offset:]` tag |
 | `word-timing-before-cue` | warning | Word timing earlier than its line's timestamp |
 | `word-timing-disorder` | warning | Word timings not ascending |
-| `invalid-word-timing` | warning | `<...>` shaped token that fails to parse |
+| `invalid-word-timing` | warning | *Timing-shaped* `<digits:…>` token that fails to parse (`<00:60>`); non-timing brackets like `<2>` or `<b>` are lyric text |
 | `duplicate-timestamp` | info | Adjacent cue lines/ stamps with equal times (reported once per group) |
 | `empty-cue-text` | info | Timestamp with no lyric text |
-| `empty-tag-value` | info | Content tags (`ti`, `ar`, `al`, `au`, `length`, `by`) with empty value |
+| `empty-tag-value` | info | Content tags (`ti`, `ar`, `al`, `au`, `length`, `by`) with empty value — including tags sharing a line |
+
+## Bracket rendering policy
+
+Red (`invalid.illegal`) is reserved for **timing-shaped** tokens that failed their valid rule:
+
+- `[digits:…]` that is not a valid timestamp (e.g. `[01:60]`) — the analyzer reports the same
+  spans as `invalid-timestamp`, whether the token leads the line or sits inside lyric text;
+- `<digits:…>` that is not a valid word timing (e.g. `<00:60>`) — reported as
+  `invalid-word-timing`.
+
+Everything else bracket-like renders **neutrally** as a section label (`entity.name.section.lrc`):
+letter-only labels (`[Chorus]`), tag-shaped annotations (`[foo:bar]`), and non-timing angle
+brackets (`<2>`, `I <3 you`). The analyzer stays silent about those — they are lyric content,
+and the toolkit never rewrites or deletes it. This is enforced by the grammar ⇔ parser
+equivalence tests (`test/unit/grammar.test.ts`).
+
+Known residual: a leading `[01:]` renders red but only warns (`unrecognized-token`) because the
+loose "stamp-like" heuristic requires digits after the colon; the same token inside lyric text
+stays silent. Tolerated — both indicate the same typo to the user.
 
 ## Offset semantics (ADR 0004)
 

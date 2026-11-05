@@ -138,6 +138,27 @@ function parseWordTimings(
   return { wordTimings: valid, invalidWordTimings: invalid };
 }
 
+/** Inline `[...]` tokens in lyric text that look like malformed timestamps. */
+const INLINE_BRACKET = /\[([^\[\]\n]*)\]/g;
+
+/**
+ * Stamp-shaped `[...]` tokens inside a cue's text region. Letter-only labels
+ * (`[Chorus]`) and tag-shaped annotations (`[foo:bar]`) are lyric content,
+ * not timing attempts, and stay untouched.
+ */
+function parseInlineStamps(text: string, textStart: number): BracketSpan[] {
+  const invalid: BracketSpan[] = [];
+  for (const match of text.matchAll(INLINE_BRACKET)) {
+    const inner = match[1] ?? "";
+    if (!looksLikeStampBody(inner)) {
+      continue;
+    }
+    const start = textStart + (match.index ?? 0);
+    invalid.push({ start, end: start + match[0].length });
+  }
+  return invalid;
+}
+
 function buildLine(raw: RawLine, index: number): LrcLine {
   const tokens = parseLeadingTokens(raw.text, raw.start);
   const first = tokens[0];
@@ -222,6 +243,7 @@ function buildLine(raw: RawLine, index: number): LrcLine {
     text: restText,
     wordTimings,
     invalidWordTimings,
+    invalidInlineStamps: parseInlineStamps(restText, textStart),
   };
 
   if (first && first.classification === "unknown") {
