@@ -5,8 +5,8 @@
 
 import type { FractionDigits } from "../core/model";
 
-/** Matches `[mm:ss]`, `[mm:ss.x]`, `[mm:ss.xx]` and `[mm:ss.xxx]`. */
-const STAMP_PATTERN = /^(\d{1,3}):(\d{1,2})(?:\.(\d{1,3}))?$/;
+/** Matches `[mm:ss]` through `[mmmm:ss]`, with an optional 1–3 digit fraction. */
+const STAMP_PATTERN = /^(\d{1,4}):(\d{1,2})(?:\.(\d{1,3}))?$/;
 
 export type StampParseResult =
   | { ok: true; totalMs: number; fractionDigits: FractionDigits }
@@ -44,7 +44,7 @@ export function parseStampBody(raw: string): StampParseResult {
 
 /** Loose check used to tell "malformed timestamp" apart from "other garbage". */
 export function looksLikeStampBody(raw: string): boolean {
-  return /^\d{1,3}\s*:\s*\d{1,3}(\.\d+)?$/.test(raw.trim());
+  return /^\d{1,4}\s*:\s*\d{1,4}(\.\d+)?$/.test(raw.trim());
 }
 
 /** Render milliseconds as `mm:ss` / `mm:ss.x` / `mm:ss.xx` / `mm:ss.xxx`. */

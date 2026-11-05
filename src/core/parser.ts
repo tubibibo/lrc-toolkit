@@ -19,8 +19,8 @@ import type {
 } from "./model";
 import { looksLikeStampBody, parseStampBody } from "../util/time";
 
-/** Valid enhanced-LRC word timings: `<mm:ss.xx>`. */
-const WORD_TIMING = /<(\d{1,3}:\d{1,2}(?:\.\d{1,3})?)>/g;
+/** Valid enhanced-LRC word timings: `<mm:ss.xx>` (minutes up to four digits). */
+const WORD_TIMING = /<(\d{1,4}:\d{1,2}(?:\.\d{1,3})?)>/g;
 /**
  * `<...>` tokens that are *timing-shaped* (start with 1–4 digits and a colon)
  * but failed the valid pattern above. Angle brackets without that shape —

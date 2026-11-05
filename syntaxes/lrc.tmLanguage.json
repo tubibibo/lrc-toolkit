@@ -19,13 +19,13 @@
       }
     },
     "timestamp": {
-      "comment": "Valid line timestamps [mm:ss.xx]; seconds are restricted to 0-59 so that [01:60] falls through to invalid-bracket.",
-      "match": "\\[\\d{1,3}:[0-5]?\\d(?:\\.\\d{1,3})?\\]",
+      "comment": "Valid line timestamps [mm:ss.xx] (minutes up to four digits); seconds are restricted to 0-59 so that [01:60] falls through to invalid-bracket.",
+      "match": "\\[\\d{1,4}:[0-5]?\\d(?:\\.\\d{1,3})?\\]",
       "name": "constant.numeric.timestamp.lrc"
     },
     "word-timing": {
-      "comment": "Valid enhanced-LRC (A2) word timings <mm:ss.xx>.",
-      "match": "<\\d{1,3}:[0-5]?\\d(?:\\.\\d{1,3})?>",
+      "comment": "Valid enhanced-LRC (A2) word timings <mm:ss.xx> (minutes up to four digits).",
+      "match": "<\\d{1,4}:[0-5]?\\d(?:\\.\\d{1,3})?>",
       "name": "constant.numeric.word-timing.lrc"
     },
     "invalid-bracket": {

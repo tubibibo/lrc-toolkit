@@ -38,6 +38,7 @@ describe("grammar ⇔ parser consistency", () => {
     "[1:5.123]",
     "[123:59.999]",
     "[01:5.1234]",
+    "[1000:00.500]",
   ];
 
   it("timestamp pattern accepts exactly what the parser accepts", () => {
@@ -53,6 +54,7 @@ describe("grammar ⇔ parser consistency", () => {
     "<00:01.5>",
     "<00:01.123>",
     "<00:01.1234>",
+    "<1000:00.500>",
   ];
 
   it("word-timing pattern accepts exactly what the parser accepts", () => {

@@ -100,6 +100,13 @@ describe("shiftTimestamps", () => {
     expect(edits).toHaveLength(1);
     expect(edits[0]?.newText).toBe("[01:02.5]");
   });
+
+  it("keeps four-digit-minute output parseable", () => {
+    const text = "[999:59.500]a\n";
+    const { edits } = shiftTimestamps(parseDocument(text), 1000);
+    expect(applyEdits(text, edits)).toBe("[1000:00.500]a\n");
+    expect(analyze(parseDocument("[1000:00.500]a\n"))).toEqual([]);
+  });
 });
 
 describe("applyOffsetTag", () => {

@@ -23,6 +23,15 @@ describe("parseStampBody", () => {
     expect(parseStampBody("75:03")).toEqual({ ok: true, totalMs: 4_503_000, fractionDigits: 0 });
   });
 
+  it("accepts four-digit minutes", () => {
+    expect(parseStampBody("1000:00.500")).toEqual({
+      ok: true,
+      totalMs: 60_000_500,
+      fractionDigits: 3,
+    });
+    expect(looksLikeStampBody("1000:00")).toBe(true);
+  });
+
   it("rejects seconds out of range", () => {
     expect(parseStampBody("01:60")).toEqual({ ok: false, reason: "seconds-out-of-range" });
   });
