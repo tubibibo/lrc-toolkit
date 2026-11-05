@@ -6,13 +6,19 @@ import { getSettings } from "./config";
 
 const DELTA_PATTERN = /^-?\d+$/;
 
+/** The active editor when it holds an `.lrc` document, or null with no nagging. */
+function activeLrcEditor(): vscode.TextEditor | null {
+  const editor = vscode.window.activeTextEditor;
+  return editor && editor.document.languageId === "lrc" ? editor : null;
+}
+
 /** Register every user-facing command declared in `package.json`. */
 export function registerCommands(): vscode.Disposable[] {
   const channel = vscode.window.createOutputChannel("LRC Toolkit");
 
   const execute = async (commandId: CommandId, extra: CommandOptions = {}): Promise<void> => {
-    const editor = vscode.window.activeTextEditor;
-    if (!editor || editor.document.languageId !== "lrc") {
+    const editor = activeLrcEditor();
+    if (!editor) {
       void vscode.window.showInformationMessage("Open a .lrc file to use LRC Toolkit commands.");
       return;
     }
@@ -59,8 +65,8 @@ export function registerCommands(): vscode.Disposable[] {
   };
 
   const executeStats = async (): Promise<void> => {
-    const editor = vscode.window.activeTextEditor;
-    if (!editor || editor.document.languageId !== "lrc") {
+    const editor = activeLrcEditor();
+    if (!editor) {
       void vscode.window.showInformationMessage("Open a .lrc file to use LRC Toolkit commands.");
       return;
     }
