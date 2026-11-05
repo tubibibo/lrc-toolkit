@@ -3,6 +3,7 @@ import * as vscode from "vscode";
 import { allTags, analyze, isCommandId, shouldOfferSortAction } from "../core";
 import type { LrcDiagnostic, LrcDocument } from "../core";
 import type { DocumentStore } from "./documentStore";
+import { toVsCodeDiagnostic } from "./diagnostics";
 
 const SOURCE_SORT = vscode.CodeActionKind.Source.append("lrc.sort");
 
@@ -59,7 +60,7 @@ class LrcCodeActionProvider implements vscode.CodeActionProvider {
       if (fix.command && isCommandId(fix.command)) {
         const action = new vscode.CodeAction(fix.title, vscode.CodeActionKind.QuickFix);
         action.command = { title: fix.title, command: `lrcToolkit.${fix.command}` };
-        action.diagnostics = [toDiagnostic(document, issue)];
+        action.diagnostics = [toVsCodeDiagnostic(document, issue)];
         actions.push(action);
       } else if (fix.edits) {
         const action = new vscode.CodeAction(fix.title, vscode.CodeActionKind.QuickFix);
@@ -71,7 +72,7 @@ class LrcCodeActionProvider implements vscode.CodeActionProvider {
             edit.newText,
           );
         }
-        action.diagnostics = [toDiagnostic(document, issue)];
+        action.diagnostics = [toVsCodeDiagnostic(document, issue)];
         actions.push(action);
       }
     }
@@ -126,19 +127,4 @@ class LrcCodeActionProvider implements vscode.CodeActionProvider {
 
     return actions;
   }
-}
-
-function toDiagnostic(document: vscode.TextDocument, issue: LrcDiagnostic): vscode.Diagnostic {
-  const diagnostic = new vscode.Diagnostic(
-    new vscode.Range(document.positionAt(issue.start), document.positionAt(issue.end)),
-    issue.message,
-    issue.severity === "error"
-      ? vscode.DiagnosticSeverity.Error
-      : issue.severity === "warning"
-        ? vscode.DiagnosticSeverity.Warning
-        : vscode.DiagnosticSeverity.Information,
-  );
-  diagnostic.code = issue.code;
-  diagnostic.source = "LRC Toolkit";
-  return diagnostic;
 }
