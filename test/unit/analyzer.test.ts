@@ -38,6 +38,9 @@ describe("analyze", () => {
     const issue = firstIssue("[ti:]");
     expect(issue.code).toBe("empty-tag-value");
     expect(issue.severity).toBe("info");
+    // The range must be visible: an empty value would otherwise produce a
+    // zero-width span, so it falls back to the token interior.
+    expect(issue.end).toBeGreaterThan(issue.start);
   });
 
   it("does not flag empty non-content tags", () => {

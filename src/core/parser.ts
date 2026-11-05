@@ -95,14 +95,20 @@ function classifyToken(inner: string, start: number, end: number): Token {
     const rawKey = inner.slice(0, colonIndex);
     if (TAG_KEY.test(rawKey)) {
       // `inner` starts at `start + 1`; the value begins right after the colon.
-      const valueStart = start + colonIndex + 2;
+      const value = inner.slice(colonIndex + 1);
+      // An empty value would yield a zero-width span (invisible squiggle);
+      // fall back to the whole token interior so the diagnostic is visible.
+      const valueSpan =
+        value.length > 0
+          ? { start: start + colonIndex + 2, end: end - 1 }
+          : { start: start + 1, end: end - 1 };
       return {
         start,
         end,
         classification: "tag",
         key: rawKey.toLowerCase(),
-        value: inner.slice(colonIndex + 1),
-        valueSpan: { start: valueStart, end: end - 1 },
+        value,
+        valueSpan,
       };
     }
   }
