@@ -6,6 +6,7 @@ test/**
 docs/**
 scripts/**
 node_modules/**
+coverage/**
 esbuild.mjs
 vitest.config.ts
 eslint.config.mjs

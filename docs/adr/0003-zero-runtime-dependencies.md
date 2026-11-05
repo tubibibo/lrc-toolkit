@@ -21,7 +21,7 @@ from `tsc` is fine but leaves the package with dozens of files.
 
 ## Consequences
 
-- The packaged extension is ≈ 23.1 KB (12 files) and activates with a single file read.
+- The packaged extension is ≈ 25.5 KB (12 files) and activates with a single file read.
 - No supply-chain surface at runtime; `npm audit` only gates development tooling.
 - Bumping `@types/vscode` must stay in lockstep with `engines.vscode` (packaging validation
   catches drift).

@@ -10,14 +10,14 @@ Verification date: 2026-11-05. Reproduce with `npm ci && npm run verify`.*
 | Strict typecheck | `tsc --noEmit` (`strict`, `noUncheckedIndexedAccess`, `verbatimModuleSyntax`, `isolatedModules`) | ✅ 0 errors |
 | Lint | `eslint .` (includes the *no `vscode` in `src/core/**`* guardrail) | ✅ 0 problems |
 | Format check | `prettier --check .` | ✅ clean |
-| Unit tests | `vitest run` | ✅ **81 passed** (5 files: time / parser / analyzer / services+commands / grammar) |
-| Bundle | `node esbuild.mjs` | ✅ `dist/extension.js` ≈ 42.3 KB (43,341 B) bundle + sourcemap |
+| Unit tests | `vitest run --coverage` | ✅ **114 passed** (7 files: time / parser / analyzer / hover / services+commands / grammar / policy) with coverage gate (93.5% stmts / 85.4% branch / 95.3% funcs / 93.5% lines over the framework-free core, thresholds 90/80/90) |
+| Bundle | `node esbuild.mjs` | ✅ `dist/extension.js` bundle + sourcemap |
 | Adapter smoke test | `node scripts/smoke-adapter.mjs` | ✅ activates the real bundle against a stubbed `vscode` module; asserts 7 commands + 4 providers + diagnostic collection + output channel register |
-| Package | `vsce package --no-dependencies` | ✅ `lrc-toolkit-0.1.0.vsix` — 12 files, **23,635 bytes ≈ 23.1 KB** |
+| Package | `vsce package --no-dependencies` | ✅ `lrc-toolkit-0.1.0.vsix` — 12 files, **26,066 bytes ≈ 25.5 KB** |
 | JSON assets | `python -I -c "json.load(...)"` over grammar/snippets/language-config/launch/tasks | ✅ all parse |
 
 Exact bytes vary by a few dozen when `README.md`/`CHANGELOG.md` (which are packaged) change;
-`≈ 23.1 KB` is the stable documented figure (1024-based KB, as printed by vsce).
+`≈ 25.5 KB` is the stable documented figure (1024-based KB, as printed by vsce).
 
 ## What each layer of verification proves
 
@@ -68,6 +68,10 @@ Beyond the stubbed smoke test, the extension was verified against the **installe
 
 3. `code test/fixtures/messy.lrc` opens the file in the GUI for the manual pass on items 1 and 9
    (if VS Code was already running, reload the window to pick up the freshly installed build).
+
+The harness was re-run after the behavior-fix pass (enhanced word timings in commands, word
+timing bracket rules, CR endings, multi-tag lines, hover stamp ordering, code-action gating):
+**8/8 programmatic checks passed** again against the rebuilt artifact.
 
 ## Known limitations
 
