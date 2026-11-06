@@ -40,6 +40,13 @@ See [docs/research.md](docs/research.md) for the survey.
 | `LRC: Expand Multi-Timestamp Lines` | `[00:01][00:02] text` → one line per timestamp |
 | `LRC: Show Document Statistics` | Cue count, duration, instrumental gaps, duplicates (in the `LRC Toolkit` output channel) |
 
+Standalone section labels such as `[Chorus]` and `[Verse]` are unrecognized
+lines, not metadata tags or timed cues. **Sort Lines by Timestamp removes
+them** and reports the number of dropped lines; it does not move section
+labels with a lyric block. Keep a copy before sorting lyrics that use these
+labels, or use Undo to restore them. A timestamped label such as
+`[00:12.00][Chorus]` is cue text and remains with its timestamp.
+
 ### Diagnostics
 
 | Code | Severity | Meaning |
@@ -144,6 +151,10 @@ adopts the [Contributor Covenant](CODE_OF_CONDUCT.md).
 本插件提供：语法高亮、12 类实时诊断（时间轴倒退、时间戳非法、逐词时间乱序等）、时间戳悬停
 信息（绝对时间、offset 换算、与前句间隔、间奏检测）、时间轴排序、时间戳整体平移、offset
 标签烘焙、精度归一化、逐词时间剥离、多时间戳行展开、文档统计与格式化。
+
+排序会移除独立的 `[Chorus]`、`[Verse]` 等无时间戳段落标记，并在结果消息中提示丢弃行数；
+不会将这些标记随歌词块移动。排序前请保留副本，或使用撤销恢复。带时间戳的标记（如
+`[00:12.00][Chorus]`）作为歌词文本保留。
 
 架构上采用“无框架核心 + 薄适配层”分层（核心层通过 ESLint 强制禁止依赖 `vscode`），
 零运行时依赖，打包后约 25.5 KB。详细设计见 [docs/design.md](docs/design.md)。
