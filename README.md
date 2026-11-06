@@ -120,15 +120,15 @@ scripts/             # icon generator and adapter smoke test
 docs/                # research, design notes, ADRs, verification report
 ```
 
-This layering lets the entire feature set run under Node (114 unit tests + a headless smoke test
+This layering lets the entire feature set run under Node (119 unit tests + a headless smoke test
 of the real esbuild bundle) without an editor runtime.
 
 ## Verification
 
 `npm run verify` runs the full gate: strict typecheck, ESLint (including the *no vscode in core*
-guardrail), Prettier, 114 unit tests, the esbuild bundle, the headless adapter smoke test and
+guardrail), Prettier, 119 unit tests, the esbuild bundle, the headless adapter smoke test and
 `vsce package`. Results are recorded in [docs/verification.md](docs/verification.md).
-The packaged extension is ≈ 25.5 KB.
+The packaged extension is ≈ 27 KB.
 
 ## Roadmap
 
@@ -157,4 +157,4 @@ adopts the [Contributor Covenant](CODE_OF_CONDUCT.md).
 `[00:12.00][Chorus]`）作为歌词文本保留。
 
 架构上采用“无框架核心 + 薄适配层”分层（核心层通过 ESLint 强制禁止依赖 `vscode`），
-零运行时依赖，打包后约 25.5 KB。详细设计见 [docs/design.md](docs/design.md)。
+零运行时依赖，打包后约 27 KB。详细设计见 [docs/design.md](docs/design.md)。
