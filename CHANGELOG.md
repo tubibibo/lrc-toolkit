@@ -6,10 +6,20 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-11-08
+
 ### Fixed
 
 - Cross-line duplicate timestamps now produce at most one informational hint per document,
-  with a message recognizing the common bilingual pairing convention.
+  with a message recognizing the common bilingual pairing convention. Previously every
+  bilingual pair added its own entry to the Problems panel even though the timeline was
+  correct. Within-line duplicates still report per line, and a genuine timeline regression
+  still raises `decreasing-timestamp` at every occurrence.
+
+### Changed
+
+- The README now states that the bilingual convention — two consecutive lines sharing one
+  timestamp — is supported and that sorting keeps each pair together.
 
 ## [0.1.1] - 2026-11-07
 

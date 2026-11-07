@@ -2,7 +2,7 @@
   "name": "lrc-toolkit",
   "displayName": "LRC Toolkit",
   "description": "A lightweight toolkit for editing LRC (synced lyrics) files: highlighting, live diagnostics, timestamp hovers, sorting, offset shifting and precision normalization.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "awwdd",
   "private": true,
   "license": "MIT",
