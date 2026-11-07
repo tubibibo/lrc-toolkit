@@ -64,6 +64,10 @@ labels, or use Undo to restore them. A timestamped label such as
 | `empty-cue-text` | info | Timestamp without lyric text (fine for instrumentals) |
 | `empty-tag-value` | info | A content tag (`ti`, `ar`, …) carries no value |
 
+The common bilingual convention of two consecutive lines sharing one timestamp is supported:
+sorting keeps each pair together, and the analyzer emits at most one informational hint per
+document for these shared start times.
+
 ### Settings
 
 | Setting | Default | Description |

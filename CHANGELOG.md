@@ -6,6 +6,11 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Fixed
+
+- Cross-line duplicate timestamps now produce at most one informational hint per document,
+  with a message recognizing the common bilingual pairing convention.
+
 ## [0.1.1] - 2026-11-07
 
 ### Fixed

@@ -86,6 +86,35 @@ describe("analyze", () => {
     expect(issues.filter((issue) => issue.code === "duplicate-timestamp")).toHaveLength(1);
   });
 
+  it("reports separate cross-line duplicate groups only once per document", () => {
+    const issues = analyze(parseDocument("[00:10.00]a\n[00:10.00]b\n[00:20.00]c\n[00:20.00]d"));
+    expect(issues.filter((issue) => issue.code === "duplicate-timestamp")).toHaveLength(1);
+  });
+
+  it("reports one informational hint for bilingual pairs", () => {
+    const text = [
+      "[00:10.00]Hello world",
+      "[00:10.00]你好世界",
+      "[00:20.00]Good morning",
+      "[00:20.00]早上好",
+      "[00:30.00]See you later",
+      "[00:30.00]回头见",
+    ].join("\n");
+    const duplicates = analyze(parseDocument(text)).filter(
+      (issue) => issue.code === "duplicate-timestamp",
+    );
+    expect(duplicates).toHaveLength(1);
+    expect(duplicates[0]?.severity).toBe("info");
+    expect(duplicates[0]?.message).toContain("normal for bilingual pairings");
+  });
+
+  it("keeps reporting timeline regressions after a duplicate hint", () => {
+    const issues = analyze(parseDocument("[00:10.00]a\n[00:10.00]b\n[00:05.00]c"));
+    const regression = issues.find((issue) => issue.code === "decreasing-timestamp");
+    expect(regression?.severity).toBe("warning");
+    expect(regression?.fix?.command).toBe("sortByTimestamp");
+  });
+
   it("reports within-line decreasing stamps with the expand fix", () => {
     const issue = firstIssue("[00:10.00][00:05.00]x");
     expect(issue.code).toBe("decreasing-timestamp");
@@ -94,6 +123,17 @@ describe("analyze", () => {
 
   it("reports within-line duplicate stamps", () => {
     expect(codesOf("[00:10.00][00:10.00]x")).toContain("duplicate-timestamp");
+  });
+
+  it("keeps reporting within-line duplicates per line after a cross-line hint", () => {
+    const text = "[00:10.00]a\n[00:10.00]b\n[00:20.00][00:20.00]c\n[00:30.00][00:30.00]d";
+    const duplicates = analyze(parseDocument(text)).filter(
+      (issue) => issue.code === "duplicate-timestamp",
+    );
+    expect(duplicates).toHaveLength(3);
+    expect(
+      duplicates.filter((issue) => issue.message === "Duplicate timestamp on the same line."),
+    ).toHaveLength(2);
   });
 
   it("reports cue lines without text", () => {

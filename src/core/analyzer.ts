@@ -78,7 +78,7 @@ function analyzeCue(
   line: CueLine,
   offsetMs: number,
   issues: LrcDiagnostic[],
-  state: { prevEffective: number | null; lastReportedDuplicate: number | null },
+  state: { prevEffective: number | null; reportedDuplicate: boolean },
 ): void {
   for (const token of line.strayTokens) {
     if (token.looksLikeStamp) {
@@ -184,15 +184,16 @@ function analyzeCue(
           message: "This line starts earlier than the previous one — the lyric timeline is broken.",
           fix: { title: "Sort all lines by timestamp", command: "sortByTimestamp" },
         });
-      } else if (start === state.prevEffective && start !== state.lastReportedDuplicate) {
+      } else if (start === state.prevEffective && !state.reportedDuplicate) {
         issues.push({
           start: first.start,
           end: first.end,
           severity: "info",
           code: "duplicate-timestamp",
-          message: "This line starts exactly where the previous one does.",
+          message:
+            "This line starts exactly where the previous one does — normal for bilingual pairings; otherwise check the timeline.",
         });
-        state.lastReportedDuplicate = start;
+        state.reportedDuplicate = true;
       }
     }
     state.prevEffective = start;
@@ -229,7 +230,7 @@ export function analyze(doc: LrcDocument): LrcDiagnostic[] {
   const offsetMs = resolveOffset(doc, issues);
   const state = {
     prevEffective: null as number | null,
-    lastReportedDuplicate: null as number | null,
+    reportedDuplicate: false,
   };
 
   for (const line of doc.lines) {
