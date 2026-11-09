@@ -94,7 +94,7 @@ raw values explicitly.
 
 ```bash
 npm ci            # install dev dependencies
-npm run verify    # typecheck → lint → format → tests → bundle → smoke → package
+npm run verify    # typecheck → lint → layering → format → tests → bundle → smoke → package
 npm run watch     # esbuild watch mode
 ```
 
@@ -124,14 +124,15 @@ scripts/             # icon generator and adapter smoke test
 docs/                # research, design notes, ADRs, verification report
 ```
 
-This layering lets the entire feature set run under Node (123 unit tests + a headless smoke test
-of the real esbuild bundle) without an editor runtime.
+This layering lets the entire feature set run under Node (the full unit suite + a headless smoke
+test of the real esbuild bundle) without an editor runtime.
 
 ## Verification
 
 `npm run verify` runs the full gate: strict typecheck, ESLint (including the *no vscode in core*
-guardrail), Prettier, 123 unit tests, the esbuild bundle, the headless adapter smoke test and
-`vsce package`. Results are recorded in [docs/verification.md](docs/verification.md).
+guardrail), the layering guardrail, Prettier, the unit tests, the esbuild bundle, the headless
+adapter smoke test and `vsce package`. Results are recorded in
+[docs/verification.md](docs/verification.md).
 The packaged extension is ≈ 27 KB.
 
 ## Roadmap

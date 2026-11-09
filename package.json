@@ -167,11 +167,12 @@
     "compile": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
     "lint": "eslint .",
+    "check:layering": "node scripts/check-layering.mjs",
     "format:check": "prettier --check .",
     "test": "vitest run --coverage",
     "smoke": "node scripts/smoke-adapter.mjs",
     "package": "vsce package --no-dependencies",
-    "verify": "npm run typecheck && npm run lint && npm run format:check && npm run test && npm run compile && npm run smoke && npm run package"
+    "verify": "npm run typecheck && npm run lint && npm run check:layering && npm run format:check && npm run test && npm run compile && npm run smoke && npm run package"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

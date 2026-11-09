@@ -39,6 +39,9 @@ Rules that make the layering enforceable, not aspirational:
 
 - **`src/core/**` and `src/util/**` must not import `vscode`.** Violations fail ESLint via
   `no-restricted-imports` (see `eslint.config.mjs`) — enforced in CI, not by convention.
+- **`src/core/**` and `src/util/**` must not reference the vscode-host adapter layer** —
+  `scripts/check-layering.mjs` (wired into `npm run verify` and CI) fails on any occurrence
+  of the `vscode-host` path segment, which covers static and dynamic `import(…)` forms alike.
 - All cross-layer values are **plain data**: diagnostics, text edits, stats and hover targets
   carry no editor types, so unit tests run in plain Node (vitest) and the adapter maps them to
   `vscode.*` types mechanically.
@@ -65,14 +68,15 @@ Rules that make the layering enforceable, not aspirational:
 - **Commands**: palette/context menu → adapter reads document text → `core.runCommand` →
   `TextEdit[]` → one `WorkspaceEdit` → diagnostics refresh via the change event.
 - **Code actions**: `core.analyze` intersected with the requested range for quick fixes;
-  document-shape-driven source actions (sort always; strip/apply-offset only when relevant).
+  document-shape-driven source actions (sort when the timeline is broken or the Refactor menu
+  asks for it — see `core/policy.ts`; strip/apply-offset only when the document shape warrants).
 - **Formatting**: `core.normalizeSpacing` mapped to `vscode.TextEdit[]`.
 
 ## Diagnostic codes
 
 | Code | Severity | Trigger |
 | --- | --- | --- |
-| `invalid-timestamp` | error | Bracket token looks like a timestamp but is malformed (seconds > 59, 4-digit fraction, garbage) — as a leading token, a stray token, **or buried in lyric text** |
+| `invalid-timestamp` | error | Bracket token looks like a timestamp but is malformed (seconds > 59, 4-digit fraction, garbage) — as a leading token, a stray token, **or buried in lyric text**. A *valid* timestamp buried in lyric text reports the same stable code with a distinct message ("move it to its own line or expand the line") so the wording matches the grammar's neutral highlighting |
 | `invalid-offset` | error | `[offset:]` value not an integer (`[offset:abc]`, `[offset:]`) |
 | `unrecognized-token` | warning | Leading bracket token is neither stamp nor tag |
 | `stray-line` | warning | Line with neither brackets nor timestamps |
@@ -81,7 +85,7 @@ Rules that make the layering enforceable, not aspirational:
 | `word-timing-before-cue` | warning | Word timing earlier than its line's timestamp |
 | `word-timing-disorder` | warning | Word timings not ascending |
 | `invalid-word-timing` | warning | *Timing-shaped* `<digits:…>` token that fails to parse (`<00:60>`); non-timing brackets like `<2>` or `<b>` are lyric text |
-| `duplicate-timestamp` | info | Adjacent cue lines/ stamps with equal times (reported once per group) |
+| `duplicate-timestamp` | info | Adjacent cue lines / stamps with equal times (cross-line duplicates are reported **once per document** — bilingual pairings are expected; within-line duplicates report per line) |
 | `empty-cue-text` | info | Timestamp with no lyric text |
 | `empty-tag-value` | info | Content tags (`ti`, `ar`, `al`, `au`, `length`, `by`) with empty value — including tags sharing a line |
 
@@ -91,6 +95,8 @@ Red (`invalid.illegal`) is reserved for **timing-shaped** tokens that failed the
 
 - `[digits:…]` that is not a valid timestamp (e.g. `[01:60]`) — the analyzer reports the same
   spans as `invalid-timestamp`, whether the token leads the line or sits inside lyric text;
+  a *valid* timestamp inside lyric text renders as a normal timestamp (the valid rule wins)
+  but is still reported with the "move it to its own line" message;
 - `<digits:…>` that is not a valid word timing (e.g. `<00:60>`) — reported as
   `invalid-word-timing`.
 

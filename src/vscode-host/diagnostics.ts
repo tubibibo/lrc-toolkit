@@ -30,6 +30,14 @@ export function registerDiagnostics(store: DocumentStore): vscode.Disposable {
 
   const update = (doc: vscode.TextDocument): void => {
     if (doc.languageId !== "lrc") {
+      // A document that used to be .lrc (relabelled to plaintext or another
+      // language) would otherwise keep its stale diagnostics forever, because
+      // only didClose clears the collection. Clear them and drop the parsed
+      // cache entry so nothing survives the relabelling.
+      if ((collection.get(doc.uri)?.length ?? 0) > 0) {
+        collection.delete(doc.uri);
+        store.evict(doc.uri);
+      }
       return;
     }
     const lrcDoc = store.get(doc);

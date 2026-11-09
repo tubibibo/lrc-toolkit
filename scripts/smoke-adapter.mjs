@@ -11,7 +11,7 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, copyFileSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, copyFileSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,15 +19,24 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const distEntry = join(root, "dist", "extension.js");
 
-const EXPECTED_COMMANDS = [
-  "lrcToolkit.applyOffsetTag",
-  "lrcToolkit.expandMultiStampLines",
-  "lrcToolkit.normalizePrecision",
-  "lrcToolkit.shiftTimestamps",
-  "lrcToolkit.showStats",
-  "lrcToolkit.sortByTimestamp",
-  "lrcToolkit.stripWordTimings",
-];
+/**
+ * The expected command list is read from `package.json` at run time, so the
+ * smoke test can never drift from the manifest: a command declared but not
+ * registered (or the reverse) fails the run.
+ */
+const EXPECTED_COMMANDS = readManifestCommandIds();
+
+function readManifestCommandIds() {
+  const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf-8"));
+  return (manifest.contributes?.commands ?? [])
+    .map((entry) => {
+      if (typeof entry?.command !== "string" || entry.command.length === 0) {
+        throw new Error("package.json contributes.commands contains a command-less entry");
+      }
+      return entry.command;
+    })
+    .sort();
+}
 
 const EXPECTED_PROVIDERS = ["codeActions", "formatter", "hover", "symbols"];
 

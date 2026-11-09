@@ -29,6 +29,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Layering guardrail
+        run: npm run check:layering
+
       - name: Format check
         run: npm run format:check
 

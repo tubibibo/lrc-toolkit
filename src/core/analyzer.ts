@@ -75,6 +75,7 @@ export function resolveOffset(doc: LrcDocument, issues: LrcDiagnostic[]): number
 }
 
 function analyzeCue(
+  doc: LrcDocument,
   line: CueLine,
   offsetMs: number,
   issues: LrcDiagnostic[],
@@ -102,13 +103,19 @@ function analyzeCue(
     });
   }
   for (const span of line.invalidInlineStamps) {
+    // The grammar highlights a *valid* timestamp in lyric text as valid, so
+    // "Malformed" would contradict the coloring; the code stays stable while
+    // the message tells the truth about which of the two shapes was found.
+    const body = doc.text.slice(span.start + 1, span.end - 1);
+    const parsed = parseStampBody(body);
     issues.push({
       start: span.start,
       end: span.end,
       severity: "error",
       code: "invalid-timestamp",
-      message:
-        "Malformed timestamp inside the lyric text — seconds must stay within 0–59, e.g. [01:23.45].",
+      message: parsed.ok
+        ? "A valid timestamp sits inside the lyric text — move it to its own line or expand the line."
+        : "Malformed timestamp inside the lyric text — seconds must stay within 0–59, e.g. [01:23.45].",
     });
   }
 
@@ -236,7 +243,7 @@ export function analyze(doc: LrcDocument): LrcDiagnostic[] {
   for (const line of doc.lines) {
     switch (line.kind) {
       case "cue":
-        analyzeCue(line, offsetMs, issues, state);
+        analyzeCue(doc, line, offsetMs, issues, state);
         break;
       case "tag":
         analyzeTag(line, issues);

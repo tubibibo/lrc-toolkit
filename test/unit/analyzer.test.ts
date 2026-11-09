@@ -146,6 +146,18 @@ describe("analyze", () => {
     const issue = firstIssue("[00:10.00]hello [01:60] world");
     expect(issue.code).toBe("invalid-timestamp");
     expect(issue.severity).toBe("error");
+    expect(issue.message).toContain("Malformed timestamp inside the lyric text");
+  });
+
+  it("tells the truth about a valid timestamp buried in lyric text", () => {
+    // The grammar renders [00:15.00] as a normal timestamp, so the message
+    // must not claim it is malformed — same stable code, honest wording.
+    const text = "[00:10.00]see [00:15.00] here";
+    const issue = firstIssue(text);
+    expect(issue.code).toBe("invalid-timestamp");
+    expect(issue.severity).toBe("error");
+    expect(issue.message).toContain("A valid timestamp sits inside the lyric text");
+    expect(text.slice(issue.start, issue.end)).toBe("[00:15.00]");
   });
 
   it("tolerates letter-only and tag-shaped labels inside lyric text", () => {

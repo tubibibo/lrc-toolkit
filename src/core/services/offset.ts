@@ -27,9 +27,15 @@ interface OffsetTagLocation {
 
 function applyOffsetTagLocation(doc: LrcDocument, location: OffsetTagLocation): TextEdit {
   const { line, tag } = location;
-  // Whole-line removal only when the baked tag is alone on its line;
-  // otherwise remove just the token so sibling tags survive.
-  if (line.additional.length === 0 && line.primarySpan.start === tag.span.start) {
+  // Whole-line removal only when the baked tag is alone on its line: nothing
+  // but whitespace may follow the token. Trailing non-tag content — a handwritten
+  // note, or a bracket token the parser does not classify as a tag (`[xx]`) —
+  // is lyric text and must survive (the toolkit never invents or deletes text),
+  // so such lines degrade to removing just the token.
+  if (
+    line.primarySpan.start === tag.span.start &&
+    doc.text.slice(tag.span.end, line.span.end).trim() === ""
+  ) {
     let deleteEnd = line.span.end;
     // Swallow the line's own terminator (which may differ from doc.eol in a
     // mixed-EOL document).

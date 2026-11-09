@@ -1,7 +1,11 @@
 # Verification report
 
-*Environment: Windows 11 (10.0.26200), Node v24.14.0, npm 11.9.0, TypeScript 5.7, ESLint 9.
+*Environment: Windows 11 (10.0.26200), Node v24.14.0 (a local version above the documented
+`>=20` floor; compatibility is backed by the CI Node 20/22 matrix), npm 11.9.0, TypeScript 5.7, ESLint 9.
 Verification date: 2026-11-05. Reproduce with `npm ci && npm run verify`.*
+
+> This report is a snapshot from v0.1.0 — for the latest numbers (test counts, coverage,
+> packaged size), trust the thresholds in `vitest.config.ts` and the current test suite.
 
 ## Automated gate — `npm run verify`
 
@@ -12,7 +16,7 @@ Verification date: 2026-11-05. Reproduce with `npm ci && npm run verify`.*
 | Format check | `prettier --check .` | ✅ clean |
 | Unit tests | `vitest run --coverage` | ✅ **114 passed** (7 files: time / parser / analyzer / hover / services+commands / grammar / policy) with coverage gate (93.5% stmts / 85.4% branch / 95.3% funcs / 93.5% lines over the framework-free core, thresholds 90/80/90) |
 | Bundle | `node esbuild.mjs` | ✅ `dist/extension.js` bundle + sourcemap |
-| Adapter smoke test | `node scripts/smoke-adapter.mjs` | ✅ activates the real bundle against a stubbed `vscode` module; asserts 7 commands + 4 providers + diagnostic collection + output channel register |
+| Adapter smoke test | `node scripts/smoke-adapter.mjs` | ✅ activates the real bundle against a stubbed `vscode` module; asserts every command declared in `package.json` + 4 providers + diagnostic collection + output channel register |
 | Package | `vsce package --no-dependencies` | ✅ `lrc-toolkit-0.1.0.vsix` — 12 files, **26,066 bytes ≈ 25.5 KB** |
 | JSON assets | `python -I -c "json.load(...)"` over grammar/snippets/language-config/launch/tasks | ✅ all parse |
 
@@ -27,9 +31,10 @@ Exact bytes vary by a few dozen when `README.md`/`CHANGELOG.md` (which are packa
    multi-stamp expansion, stats & gap detection), command dispatch. Fixtures:
    `test/fixtures/sample.lrc` (clean) and `test/fixtures/messy.lrc` (deliberately broken).
 2. **Adapter smoke test** — the *actual esbuild bundle* (`dist/extension.js`) is loaded in a
-   Node child process with a stubbed `vscode` module and `activate()` is executed; the test
-   fails unless every command id from `package.json` and every provider registration is
-   present. This proves the shipped artifact wires up, not just that TypeScript compiles.
+   Node child process with a stubbed `vscode` module and `activate()` is executed; the command
+   list is read from `package.json`'s `contributes.commands` at run time, so the run fails
+   unless every declared command id and every provider registration is present in the bundle.
+   This proves the shipped artifact wires up, not just that TypeScript compiles.
 3. **Packaging** — `vsce` validates the manifest (engines ↔ `@types/vscode` lockstep, icon,
    contributes section, `.vscodeignore` completeness).
 

@@ -159,6 +159,35 @@ describe("applyOffsetTag", () => {
     expect(applyEdits(text, result!.edits)).toBe("[ti:x]\n[00:09.50]a\n");
   });
 
+  it("removes only the offset token when a sibling tag follows it", () => {
+    const text = "[offset:+500][ti:x]\n[00:10.00]a\n";
+    const result = applyOffsetTag(parseDocument(text));
+    expect(applyEdits(text, result!.edits)).toBe("[ti:x]\n[00:09.50]a\n");
+  });
+
+  it("keeps trailing text on the offset tag's line instead of deleting it", () => {
+    // A handwritten note after the tag is lyric text — the toolkit never
+    // deletes text, so the line degrades to a token-only removal.
+    const text = "[offset:+500] 手写注释\n[00:10.00]a\n";
+    const result = applyOffsetTag(parseDocument(text));
+    expect(applyEdits(text, result!.edits)).toBe(" 手写注释\n[00:09.50]a\n");
+  });
+
+  it("keeps unclassified bracket tokens that share the offset tag's line", () => {
+    // [xx] is not a tag (no colon), so it never enters `additional`; without
+    // the trailing-content check the whole line used to be deleted.
+    const text = "[offset:+500][xx]\n[00:10.00]a\n";
+    const result = applyOffsetTag(parseDocument(text));
+    expect(applyEdits(text, result!.edits)).toBe("[xx]\n[00:09.50]a\n");
+  });
+
+  it("still deletes the whole line when the tag is alone on it", () => {
+    const text = "[00:10.00]a\n[offset:+500]\n[00:20.00]b\n";
+    const result = applyOffsetTag(parseDocument(text));
+    expect(result?.shiftedCount).toBe(2);
+    expect(applyEdits(text, result!.edits)).toBe("[00:09.50]a\n[00:19.50]b\n");
+  });
+
   it("reports duplicates when several offset tags share one line", () => {
     const text = "[offset:+500][offset:+600]\n[00:10.00]a\n";
     const result = applyOffsetTag(parseDocument(text));
