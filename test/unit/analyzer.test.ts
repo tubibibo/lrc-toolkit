@@ -160,6 +160,28 @@ describe("analyze", () => {
     expect(text.slice(issue.start, issue.end)).toBe("[00:15.00]");
   });
 
+  it("reports exact coordinates for an invalid timestamp after CJK text", () => {
+    const text = "[00:10.00]你好 [01:60] 世界";
+    const issue = firstIssue(text);
+    expect(issue.code).toBe("invalid-timestamp");
+    // Spans are absolute UTF-16 code-unit offsets, so a symptom preceded by
+    // multi-byte characters must slice out exactly the bracket token.
+    expect(text.slice(issue.start, issue.end)).toBe("[01:60]");
+    expect(issue.start).toBe(13); // "[00:10.00]" + "你好" + " "
+    expect(issue.end).toBe(20);
+  });
+
+  it("reports exact coordinates when surrogate pairs precede the symptom", () => {
+    // Each emoji is a surrogate pair (2 code units); the span must not drift
+    // by counting characters instead of code units.
+    const text = "[00:10.00]🎵🎶 [01:60] 世界";
+    const issue = firstIssue(text);
+    expect(issue.code).toBe("invalid-timestamp");
+    expect(text.slice(issue.start, issue.end)).toBe("[01:60]");
+    expect(issue.start).toBe(15); // "[00:10.00]" + 2 emoji + " "
+    expect(issue.end).toBe(22);
+  });
+
   it("tolerates letter-only and tag-shaped labels inside lyric text", () => {
     expect(codesOf("[00:01.00] [Chorus]")).toEqual([]);
     expect(codesOf("[00:01.00]x [foo:bar] y")).toEqual([]);
@@ -199,5 +221,23 @@ describe("analyze", () => {
     expect(codes).toContain("decreasing-timestamp");
     expect(codes).toContain("word-timing-disorder");
     expect(codes).toContain("empty-cue-text");
+  });
+
+  it("reports exact coordinates for the fixture's CJK fault line", async () => {
+    const { readFileSync } = await import("node:fs");
+    const text = readFileSync(new URL("../fixtures/messy.lrc", import.meta.url), "utf-8");
+    // The fixture carries `[00:35.00]第二段 [02:75] 副歌` — an inline
+    // seconds-out-of-range stamp preceded by CJK lyric text.
+    const matches = analyze(parseDocument(text)).filter(
+      (issue) =>
+        issue.code === "invalid-timestamp" && text.slice(issue.start, issue.end) === "[02:75]",
+    );
+    expect(matches).toHaveLength(1);
+    const issue = matches[0]!;
+    expect(issue.severity).toBe("error");
+    // The span must sit exactly on the bracket token, not drift into the
+    // surrounding multi-byte lyric.
+    expect(text.slice(issue.start - 1, issue.start)).toBe(" ");
+    expect(text.slice(issue.end, issue.end + 1)).toBe(" ");
   });
 });

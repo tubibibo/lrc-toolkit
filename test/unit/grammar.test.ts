@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-import { parseStampBody } from "../../src/util/time";
+import { looksLikeStampBody, parseStampBody } from "../../src/util/time";
 
 /**
  * Guards consistency between the TextMate grammar and the analyzer:
@@ -96,5 +96,60 @@ describe("grammar ⇔ parser consistency", () => {
       expect(wordTimingInvalidPattern.test(token)).toBe(false);
       expect(wordTimingPattern.test(token)).toBe(false);
     }
+  });
+
+  it("rejects word-timing bodies beyond the 22-character content cap on both sides", () => {
+    // <00:01.1234567890123456789012345> carries 28 characters after the
+    // colon, past the shared {0,22} content cap: neither the valid nor the
+    // invalid rule claims it, and the parser rejects the body too — both
+    // sides agree it is plain text (silent, never red).
+    const token = "<00:01.1234567890123456789012345>";
+    const body = token.slice(1, -1);
+    expect(wordTimingPattern.test(token)).toBe(parserAccepts(body));
+    expect(parserAccepts(body)).toBe(false);
+    expect(wordTimingInvalidPattern.test(token)).toBe(false);
+  });
+
+  it("treats five-digit minutes as not-a-timestamp on both sides", () => {
+    // [10000:00] exceeds the four-digit minute budget (the design.md
+    // residual decision): the valid rule rejects it exactly like the parser,
+    // and because the invalid rule's four-digit budget cannot match either,
+    // it renders as a neutral label while the parser — whose loose stamp
+    // heuristic also needs four digits at most — only warns.
+    const token = "[10000:00]";
+    const body = "10000:00";
+    expect(timestampPattern.test(token)).toBe(parserAccepts(body));
+    expect(parserAccepts(body)).toBe(false);
+    expect(invalidBracketPattern.test(token)).toBe(false);
+    expect(labelPattern.test(token)).toBe(true);
+    expect(looksLikeStampBody(body)).toBe(false);
+  });
+
+  it("renders a trailing-dot stamp red while the parser only warns", () => {
+    // [00:01.] is timing-shaped for the invalid rule (red), but the parser's
+    // loose heuristic requires digits after the dot — so the analyzer stays
+    // at unrecognized-token (warning), never invalid-timestamp (error).
+    const token = "[00:01.]";
+    const body = "00:01.";
+    expect(timestampPattern.test(token)).toBe(parserAccepts(body));
+    expect(parserAccepts(body)).toBe(false);
+    expect(invalidBracketPattern.test(token)).toBe(true);
+    expect(labelPattern.test(token)).toBe(false);
+    expect(looksLikeStampBody(body)).toBe(false);
+  });
+
+  it("renders [01:xy] red but keeps the diagnostic at warning level", () => {
+    // The existing decision, made explicit as a contract: a token shaped
+    // like a timestamp with non-numeric seconds turns red (invalid-bracket),
+    // while the parser's loose heuristic rejects it as a stamp, so the
+    // diagnostic stays an unrecognized-token warning — the same tolerated
+    // mismatch the design notes record for a leading [01:].
+    const token = "[01:xy]";
+    const body = "01:xy";
+    expect(timestampPattern.test(token)).toBe(parserAccepts(body));
+    expect(parserAccepts(body)).toBe(false);
+    expect(invalidBracketPattern.test(token)).toBe(true);
+    expect(labelPattern.test(token)).toBe(false);
+    expect(looksLikeStampBody(body)).toBe(false);
   });
 });

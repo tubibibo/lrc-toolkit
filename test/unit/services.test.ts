@@ -37,6 +37,27 @@ describe("sortCues", () => {
     expect(result?.edit.newText).toBe("[00:01.00]a\r\n[00:02.00]b");
   });
 
+  it("keeps metadata tags on top with their own terminators (README contract)", () => {
+    // Locks the README promise "tags stay on top": a tag line that appears
+    // between cues moves back above every cue and keeps its own terminator.
+    const doc = parseDocument("[00:10.00]a\n[tr:x]\n[00:05.00]b\n");
+    const result = sortCues(doc);
+    expect(result?.edit.newText).toBe("[tr:x]\n[00:05.00]b\n[00:10.00]a\n");
+    expect(result?.cueCount).toBe(2);
+    expect(result?.droppedLines).toBe(0);
+  });
+
+  it("keeps an inline label with its timestamp and adds no trailing break (README contract)", () => {
+    // Locks the README promise that "[00:12.00][Chorus] … remains with its
+    // timestamp", and that sorting a breakless document stays breakless.
+    const text = "[00:02.00]b\r\n[00:01.00][Chorus]a";
+    const result = sortCues(parseDocument(text));
+    expect(result?.edit.newText).toBe("[00:01.00][Chorus]a\r\n[00:02.00]b");
+    expect(result?.edit.newText).toContain("[Chorus]");
+    expect(result?.edit.newText.endsWith("\n")).toBe(false);
+    expect(result?.edit.newText.endsWith("\r")).toBe(false);
+  });
+
   it("does not let a uniform offset tag change the relative order", () => {
     const doc = parseDocument("[offset:+8000]\n[00:12.00]a\n[00:05.00]b\n");
     expect(sortCues(doc)?.edit.newText).toBe("[offset:+8000]\n[00:05.00]b\n[00:12.00]a\n");
