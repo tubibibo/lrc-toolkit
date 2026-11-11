@@ -44,4 +44,6 @@ export { normalizePrecision, normalizeSpacing } from "./services/normalize";
 export { expandMultiStampLines, stripWordTimings } from "./services/convert";
 export { mergeBilingualPairs, splitBilingualLines } from "./services/bilingual";
 export type { MergeBilingualResult, SplitBilingualResult } from "./services/bilingual";
+export { parseSrt, formatSrt, srtCuesToLrc, lrcToSrtCues } from "./services/srt";
+export type { SrtCue, ParseSrtResult } from "./services/srt";
 export { computeStats, formatStatsReport, formatStatsSummary } from "./services/stats";

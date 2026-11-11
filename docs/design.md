@@ -57,7 +57,7 @@ Rules that make the layering enforceable, not aspirational:
 | `src/core/parser.ts` | Raw text → `LrcDocument`; classifies tokens, never judges them | model, util/time |
 | `src/core/analyzer.ts` | `LrcDocument` → diagnostics; offset resolution | model, util/time |
 | `src/core/hover.ts` | Structured hover targets (timestamp / word timing / tag) | model, analyzer |
-| `src/core/services/*` | Deterministic transformations returning `TextEdit[]` (sort / shift / offset / normalize / convert / bilingual / stats) | parser, analyzer, util/time |
+| `src/core/services/*` | Deterministic transformations returning `TextEdit[]` (sort / shift / offset / normalize / convert / bilingual / srt / stats) | parser, analyzer, util/time |
 | `src/core/commands.ts` | Command registry: `runCommand(id, text, options)` → edits + messages | parser, services |
 | `src/vscode-host/*` | Providers, command registration, diagnostics collection, settings | core (index only) |
 
@@ -162,6 +162,30 @@ counted in the result message. With `keepUnrecognized` (setting
 skipped, several labels ride above the same cue in original order, and a label with no
 following cue is still dropped and counted. The dropped-lines message keeps counting exactly
 what was removed; labels that travel with a cue are not drops.
+
+## SRT / VTT conversion semantics
+
+`services/srt.ts` is a pure text ⇄ text conversion with a deliberately narrow fidelity scope:
+**the timeline plus the plain text** — SRT and LRC have no shared concept of tags, word timings
+or styling, so everything else is dropped and reported, never half-converted.
+
+- **Import** (`parseSrt` → `srtCuesToLrc`): blank-line separated blocks, optional numeric index
+  line, `HH:MM:SS,mmm --> HH:MM:SS,mmm` timings with WebVTT's `.` millisecond separator and
+  optional hours accepted (`MM:SS.mmm`), BOM and CRLF/CR tolerated. A block's multi-line text is
+  joined into one lyric line; `<i>`-family inline markup is stripped; STYLE / NOTE blocks,
+  text-less cues and unparseable blocks are dropped and counted in `droppedBlocks` (the same
+  reporting convention as the sort command). The `WEBVTT` signature header is dropped without
+  counting — a plain `.vtt` file must not report a spurious drop. Cue timestamps are rounded
+  onto the centisecond grid LRC uses.
+- **Export** (`lrcToSrtCues` → `formatSrt`): one SRT block per cue line, using the line's
+  **first** timestamp (the documented first-stamp-only rule) rendered as an *effective* time —
+  `[offset:]` is baked in because an SRT has no offset mechanism (clamped at 00:00) — with
+  enhanced word timings stripped from the text. `formatSrt` recomputes end times from the next
+  line's start minus 1 ms (final block: start + 2 s), so exported ends are never stale; equal
+  starts (bilingual pairs) clamp to a zero-length block instead of reversing. The adapter
+  never overwrites an existing file silently (modal confirm).
+- **Round trip**: `parse → format → parse` is stable — starts and texts are preserved exactly,
+  ends converge to the recomputed values on the first format.
 
 ## Statistics semantics
 

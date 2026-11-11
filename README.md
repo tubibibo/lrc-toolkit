@@ -26,6 +26,7 @@ See [docs/research.md](docs/research.md) for the survey.
 | Tag hover | Explains every standard metadata tag |
 | Document outline | Metadata tags and every cue line appear in the symbol outline |
 | Code actions | Quick fixes from diagnostics + source actions (sort, strip word timings, apply offset) |
+| SRT / VTT import & export | SubRip / WebVTT subtitles ↔ LRC — fidelity scope is the timeline plus plain text |
 | Document formatter | Normalizes spacing between timestamps and text, trims trailing whitespace |
 
 ### Commands
@@ -41,7 +42,17 @@ See [docs/research.md](docs/research.md) for the survey.
 | `LRC: Expand Multi-Timestamp Lines` | `[00:01][00:02] text` → one line per timestamp |
 | `LRC: Merge Bilingual Lines (original\|translation)` | Two adjacent cue lines sharing one timestamp → one `original\|translation` line (timestamp from the first line) |
 | `LRC: Split Bilingual Lines at '\|'` | Merged bilingual lines → two timestamped lines, split at the first unescaped `\|` |
+| `LRC: Import Subtitles (SRT/VTT)…` | Reads an `.srt`/`.vtt` file and opens the converted lyrics as a new untitled `.lrc` document |
+| `LRC: Export as SRT…` | Writes the active `.lrc` document as SRT (asks before overwriting) |
 | `LRC: Show Document Statistics` | Cue count, duration, instrumental gaps, duplicates (in the `LRC Toolkit` output channel) |
+
+SRT / VTT conversion keeps the **timeline and the plain text** — nothing else. Import strips
+inline markup (`<i>…</i>` and friends), joins a block's multi-line text into one lyric line and
+drops `STYLE` / `NOTE` sections (the result message reports how many); both the SRT
+`HH:MM:SS,mmm` form and WebVTT's `.` separator with optional hours are accepted. Export writes
+one SRT block per lyric line using each line's first timestamp with the `[offset:]` baked in
+(an SRT has no offset mechanism), recomputes end times from the next line's start, and never
+overwrites an existing file silently.
 
 Standalone section labels such as `[Chorus]` and `[Verse]` are unrecognized
 lines, not metadata tags or timed cues. **Sort Lines by Timestamp removes
@@ -169,7 +180,7 @@ adopts the [Contributor Covenant](CODE_OF_CONDUCT.md).
 本插件提供：语法高亮、13 类实时诊断（时间轴倒退、时间戳非法、逐词时间乱序、疑似编码错误等）、
 时间戳悬停信息（绝对时间、offset 换算、与前句间隔、间奏检测）、时间轴排序、时间戳整体平移、
 offset 标签烘焙、精度归一化、逐词时间剥离、多时间戳行展开、双语行合并与拆分（`原文|译文`）、
-文档统计与格式化。
+SRT/VTT 字幕导入导出（保真范围 = 时间轴 + 纯文本）、文档统计与格式化。
 
 方向约定：按通用规范，正 `[offset:]` 让歌词**提前**显示（显示时间 = 时间戳 − offset，
 见 [ADR 0004](docs/adr/0004-offset-sign-convention.md)）；个别播放器方向相反，此时可用

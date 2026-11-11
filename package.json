@@ -127,6 +127,14 @@
       {
         "command": "lrcToolkit.invertOffsetSign",
         "title": "LRC: Invert [offset:] Sign"
+      },
+      {
+        "command": "lrcToolkit.importSrt",
+        "title": "LRC: Import Subtitles (SRT/VTT)…"
+      },
+      {
+        "command": "lrcToolkit.exportSrt",
+        "title": "LRC: Export as SRT…"
       }
     ],
     "menus": {
@@ -186,6 +194,13 @@
         },
         {
           "command": "lrcToolkit.invertOffsetSign",
+          "when": "resourceLangId == lrc"
+        },
+        {
+          "command": "lrcToolkit.importSrt"
+        },
+        {
+          "command": "lrcToolkit.exportSrt",
           "when": "resourceLangId == lrc"
         }
       ]

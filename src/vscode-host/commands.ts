@@ -1,6 +1,16 @@
 import * as vscode from "vscode";
+import { basename } from "path";
 
-import { computeStats, formatStatsReport, formatStatsSummary, runCommand } from "../core";
+import {
+  computeStats,
+  formatStatsReport,
+  formatStatsSummary,
+  formatSrt,
+  lrcToSrtCues,
+  parseSrt,
+  runCommand,
+  srtCuesToLrc,
+} from "../core";
 import type { CommandId, CommandOptions, TextEdit } from "../core";
 import { getSettings } from "./config";
 import type { DocumentStore } from "./documentStore";
@@ -94,6 +104,99 @@ export function registerCommands(store: DocumentStore): vscode.Disposable[] {
     );
   };
 
+  /**
+   * Import an SRT/WebVTT file as a new untitled .lrc document. Reads the
+   * chosen file itself, so it works from any editor — the palette entry is
+   * deliberately not filtered to LRC files.
+   */
+  const executeImportSrt = async (): Promise<void> => {
+    const open = await vscode.window.showOpenDialog({
+      title: "Import subtitles as LRC",
+      canSelectMany: false,
+      filters: { "Subtitles (SRT/VTT)": ["srt", "vtt"] },
+    });
+    const file = open?.[0];
+    if (!file) {
+      return;
+    }
+    let text: string;
+    try {
+      text = new TextDecoder().decode(await vscode.workspace.fs.readFile(file));
+    } catch {
+      void vscode.window.showErrorMessage(
+        `LRC Toolkit: could not read "${basename(file.fsPath)}" — the file may have been moved or locked.`,
+      );
+      return;
+    }
+    const { cues, droppedBlocks } = parseSrt(text);
+    if (cues.length === 0) {
+      void vscode.window.showInformationMessage(
+        `LRC Toolkit: no subtitle cues found in "${basename(file.fsPath)}" — the file may be empty or not in SRT/VTT format.`,
+      );
+      return;
+    }
+    const document = await vscode.workspace.openTextDocument({
+      content: srtCuesToLrc(cues),
+      language: "lrc",
+    });
+    await vscode.window.showTextDocument(document);
+    const dropped = droppedBlocks > 0 ? `; dropped ${droppedBlocks} non-cue block(s)` : "";
+    void vscode.window.showInformationMessage(
+      `LRC Toolkit: imported ${cues.length} cue(s) into an untitled .lrc document${dropped}.`,
+    );
+  };
+
+  /** Export the active .lrc document as SRT, never silently overwriting. */
+  const executeExportSrt = async (): Promise<void> => {
+    const editor = activeLrcEditor();
+    if (!editor) {
+      void vscode.window.showInformationMessage("Open a .lrc file to use LRC Toolkit commands.");
+      return;
+    }
+    const cues = lrcToSrtCues(store.get(editor.document));
+    if (cues.length === 0) {
+      void vscode.window.showInformationMessage(
+        "LRC Toolkit: no timestamped lyric lines to export.",
+      );
+      return;
+    }
+    const saved = editor.document.uri.scheme !== "untitled";
+    const proposedName = `${basename(editor.document.uri.fsPath).replace(/\.lrc$/i, "")}.srt`;
+    const target = await vscode.window.showSaveDialog({
+      title: "Export as SRT",
+      filters: { "SubRip subtitles": ["srt"] },
+      ...(saved && proposedName !== ".srt" ? { defaultUri: vscode.Uri.file(proposedName) } : {}),
+    });
+    if (!target) {
+      return;
+    }
+    // Never overwrite silently: a simple modal confirm for existing files.
+    try {
+      await vscode.workspace.fs.stat(target);
+      const overwrite = await vscode.window.showWarningMessage(
+        `"${basename(target.fsPath)}" already exists. Overwrite it?`,
+        { modal: true },
+        "Overwrite",
+      );
+      if (overwrite !== "Overwrite") {
+        return;
+      }
+    } catch {
+      // stat failing means the file does not exist yet — safe to write.
+    }
+    try {
+      await vscode.workspace.fs.writeFile(target, new TextEncoder().encode(formatSrt(cues)));
+    } catch {
+      void vscode.window.showErrorMessage(
+        `LRC Toolkit: could not write "${basename(target.fsPath)}" — the location may be read-only.`,
+      );
+      return;
+    }
+    void vscode.window.showInformationMessage(
+      `LRC Toolkit: exported ${cues.length} cue(s) to "${basename(target.fsPath)}".`,
+    );
+  };
+
   const registrations: Array<[string, () => Promise<void> | void]> = [
     ["lrcToolkit.sortByTimestamp", () => execute("sortByTimestamp")],
     ["lrcToolkit.shiftTimestamps", executeShift],
@@ -105,6 +208,8 @@ export function registerCommands(store: DocumentStore): vscode.Disposable[] {
     ["lrcToolkit.mergeBilingualLines", () => execute("mergeBilingualLines")],
     ["lrcToolkit.splitBilingualLines", () => execute("splitBilingualLines")],
     ["lrcToolkit.invertOffsetSign", () => execute("invertOffsetSign")],
+    ["lrcToolkit.importSrt", executeImportSrt],
+    ["lrcToolkit.exportSrt", executeExportSrt],
   ];
 
   return [

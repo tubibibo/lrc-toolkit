@@ -29,6 +29,13 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 - New setting `lrcToolkit.sort.keepSectionLabels` (default `false` = previous behavior): when
   sorting, keep standalone section labels instead of dropping them — each label travels with
   the first cue line that follows it and is re-sorted together with that cue.
+- SRT / VTT import and export (`Import Subtitles (SRT/VTT)…`, `Export as SRT…`). The fidelity
+  scope is the timeline plus the plain text: import accepts the SRT `HH:MM:SS,mmm` timing form
+  as well as WebVTT's `.` separator and optional hours, joins a block's multi-line text into
+  one lyric line, strips `<i>`-family inline markup, and drops `STYLE`/`NOTE` sections with a
+  reported count; export writes one SRT block per lyric line (first timestamp, `[offset:]`
+  baked in), recomputes end times from the next line's start, and confirms before overwriting
+  an existing file.
 
 ### Fixed
 
