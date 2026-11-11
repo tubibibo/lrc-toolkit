@@ -46,34 +46,34 @@ class LrcCodeActionProvider implements vscode.CodeActionProvider {
   ): vscode.CodeAction[] {
     const actions: vscode.CodeAction[] = [];
     for (const issue of issues) {
-      if (!issue.fix) {
-        continue;
-      }
-      const issueRange = new vscode.Range(
-        document.positionAt(issue.start),
-        document.positionAt(issue.end),
-      );
-      if (!issueRange.intersection(range)) {
-        continue;
-      }
-      const fix = issue.fix;
-      if (fix.command && isCommandId(fix.command)) {
-        const action = new vscode.CodeAction(fix.title, vscode.CodeActionKind.QuickFix);
-        action.command = { title: fix.title, command: `lrcToolkit.${fix.command}` };
-        action.diagnostics = [toVsCodeDiagnostic(document, issue)];
-        actions.push(action);
-      } else if (fix.edits) {
-        const action = new vscode.CodeAction(fix.title, vscode.CodeActionKind.QuickFix);
-        action.edit = new vscode.WorkspaceEdit();
-        for (const edit of fix.edits) {
-          action.edit.replace(
-            document.uri,
-            new vscode.Range(document.positionAt(edit.start), document.positionAt(edit.end)),
-            edit.newText,
-          );
+      // A diagnostic may carry several fixes (e.g. carry or clamp for an
+      // out-of-range timestamp) — each becomes its own Quick Fix action.
+      for (const fix of issue.fixes ?? []) {
+        const issueRange = new vscode.Range(
+          document.positionAt(issue.start),
+          document.positionAt(issue.end),
+        );
+        if (!issueRange.intersection(range)) {
+          continue;
         }
-        action.diagnostics = [toVsCodeDiagnostic(document, issue)];
-        actions.push(action);
+        if (fix.command && isCommandId(fix.command)) {
+          const action = new vscode.CodeAction(fix.title, vscode.CodeActionKind.QuickFix);
+          action.command = { title: fix.title, command: `lrcToolkit.${fix.command}` };
+          action.diagnostics = [toVsCodeDiagnostic(document, issue)];
+          actions.push(action);
+        } else if (fix.edits) {
+          const action = new vscode.CodeAction(fix.title, vscode.CodeActionKind.QuickFix);
+          action.edit = new vscode.WorkspaceEdit();
+          for (const edit of fix.edits) {
+            action.edit.replace(
+              document.uri,
+              new vscode.Range(document.positionAt(edit.start), document.positionAt(edit.end)),
+              edit.newText,
+            );
+          }
+          action.diagnostics = [toVsCodeDiagnostic(document, issue)];
+          actions.push(action);
+        }
       }
     }
     return actions;

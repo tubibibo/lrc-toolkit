@@ -70,7 +70,7 @@ describe("analyze", () => {
   it("warns when the timeline decreases between lines", () => {
     const issue = firstIssue("[00:10.00]a\n[00:05.00]b");
     expect(issue.code).toBe("decreasing-timestamp");
-    expect(issue.fix?.command).toBe("sortByTimestamp");
+    expect(issue.fixes?.[0]?.command).toBe("sortByTimestamp");
   });
 
   it("keeps checking the timeline when an offset tag is present", () => {
@@ -112,13 +112,13 @@ describe("analyze", () => {
     const issues = analyze(parseDocument("[00:10.00]a\n[00:10.00]b\n[00:05.00]c"));
     const regression = issues.find((issue) => issue.code === "decreasing-timestamp");
     expect(regression?.severity).toBe("warning");
-    expect(regression?.fix?.command).toBe("sortByTimestamp");
+    expect(regression?.fixes?.[0]?.command).toBe("sortByTimestamp");
   });
 
   it("reports within-line decreasing stamps with the expand fix", () => {
     const issue = firstIssue("[00:10.00][00:05.00]x");
     expect(issue.code).toBe("decreasing-timestamp");
-    expect(issue.fix?.command).toBe("expandMultiStampLines");
+    expect(issue.fixes?.[0]?.command).toBe("expandMultiStampLines");
   });
 
   it("reports within-line duplicate stamps", () => {
@@ -192,6 +192,62 @@ describe("analyze", () => {
     expect(issue.code).toBe("word-timing-before-cue");
   });
 
+  it("offers to align a word timing that starts before its cue", () => {
+    const text = "[00:10.00] <00:09.00>word";
+    const issue = firstIssue(text);
+    expect(issue.code).toBe("word-timing-before-cue");
+    expect(issue.fixes?.[0]?.edits?.[0]).toEqual({
+      start: 11,
+      end: 21,
+      newText: "<00:10.00>",
+    });
+    // The aligned rendering keeps the word timing's own fraction digit count
+    // (the cue start 10.000 s at 1-digit precision reads 00:10.0).
+    const singleDigit = firstIssue("[00:10.00] <00:09.5>x");
+    expect(singleDigit.fixes?.[0]?.edits?.[0]?.newText).toBe("<00:10.0>");
+  });
+
+  it("offers carry and clamp fixes for a seconds-out-of-range timestamp", () => {
+    const text = "[01:75.00]a";
+    const issue = firstIssue(text);
+    expect(issue.code).toBe("invalid-timestamp");
+    expect(issue.fixes).toHaveLength(2);
+    expect(issue.fixes?.[0]?.edits?.[0]).toEqual({
+      start: 0,
+      end: 10,
+      newText: "[02:15.00]",
+    });
+    expect(issue.fixes?.[1]?.title).toContain("[01:59.00]");
+    expect(issue.fixes?.[1]?.edits?.[0]?.newText).toBe("[01:59.00]");
+  });
+
+  it("repairs leading unknown tokens and inline stamps alike", () => {
+    // Leading token: fraction-less stamp stays fraction-less after repair.
+    const leading = firstIssue("[01:75]a");
+    expect(leading.fixes?.map((fix) => fix.edits?.[0]?.newText)).toEqual(["[02:15]", "[01:59]"]);
+    // Inline stamp keeps its 1-digit fraction.
+    const inline = firstIssue("[00:10.00]hello [01:75.5] world");
+    expect(inline.code).toBe("invalid-timestamp");
+    expect(inline.fixes?.map((fix) => fix.edits?.[0]?.newText)).toEqual(["[02:15.5]", "[01:59.5]"]);
+  });
+
+  it("drops the carry fix when carrying would overflow the four-digit minutes", () => {
+    // 9999:75 would carry into 10000:15, which the parser rejects.
+    const issue = firstIssue("[9999:75]a");
+    expect(issue.fixes).toHaveLength(1);
+    expect(issue.fixes?.[0]?.edits?.[0]?.newText).toBe("[9999:59]");
+  });
+
+  it("offers no numeric repairs for shapes it cannot rewrite safely", () => {
+    // 4-digit fraction: a "format" failure, not a seconds overflow.
+    const malformed = firstIssue("[01:60.1234]a");
+    expect(malformed.code).toBe("invalid-timestamp");
+    expect(malformed.fixes).toBeUndefined();
+    // A valid timestamp buried in lyric text needs restructuring, not a patch.
+    const buried = firstIssue("[00:10.00]see [00:15.00] here");
+    expect(buried.fixes).toBeUndefined();
+  });
+
   it("warns about disordered word timings", () => {
     const issue = firstIssue("[00:10.00] <00:11.00>a <00:10.50>b");
     expect(issue.code).toBe("word-timing-disorder");
@@ -239,5 +295,35 @@ describe("analyze", () => {
     // surrounding multi-byte lyric.
     expect(text.slice(issue.start - 1, issue.start)).toBe(" ");
     expect(text.slice(issue.end, issue.end + 1)).toBe(" ");
+  });
+
+  it("stays silent below the replacement-character threshold", () => {
+    // Two stray U+FFFD characters may be a paste artifact — no hint.
+    expect(codesOf("[00:10.00]a\uFFFDb\uFFFDc")).toEqual([]);
+  });
+
+  it("reports one suspected-encoding info at the first replacement character", () => {
+    const text = "[00:10.00]a\uFFFDb\uFFFDc\uFFFDd";
+    const encoding = analyze(parseDocument(text)).filter(
+      (issue) => issue.code === "suspected-encoding",
+    );
+    expect(encoding).toHaveLength(1);
+    const issue = encoding[0]!;
+    expect(issue.severity).toBe("info");
+    expect(text.slice(issue.start, issue.end)).toBe("\uFFFD");
+    // "[00:10.00]" occupies 0–9, "a" is at 10, so the first U+FFFD sits at 11.
+    expect(issue.start).toBe(11);
+    expect(issue.message).toContain("3 replacement characters");
+    expect(issue.message).toContain("Reopen with Encoding");
+    expect(issue.message).toContain("Change File Encoding");
+  });
+
+  it("reports suspected-encoding once per document regardless of the count", () => {
+    const text = "[00:10.00]" + "\uFFFD".repeat(10);
+    const encoding = analyze(parseDocument(text)).filter(
+      (issue) => issue.code === "suspected-encoding",
+    );
+    expect(encoding).toHaveLength(1);
+    expect(encoding[0]?.message).toContain("10 replacement characters");
   });
 });

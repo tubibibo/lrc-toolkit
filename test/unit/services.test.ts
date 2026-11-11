@@ -3,9 +3,10 @@ import { describe, expect, it } from "vitest";
 import { parseDocument } from "../../src/core/parser";
 import { sortCues } from "../../src/core/services/sort";
 import { shiftTimestamps } from "../../src/core/services/shift";
-import { applyOffsetTag } from "../../src/core/services/offset";
+import { applyOffsetTag, invertOffsetSign } from "../../src/core/services/offset";
 import { normalizePrecision, normalizeSpacing } from "../../src/core/services/normalize";
 import { expandMultiStampLines, stripWordTimings } from "../../src/core/services/convert";
+import { mergeBilingualPairs, splitBilingualLines } from "../../src/core/services/bilingual";
 import { computeStats, formatStatsReport } from "../../src/core/services/stats";
 import { runCommand } from "../../src/core/commands";
 import { isCommandId } from "../../src/core/commands";
@@ -96,6 +97,44 @@ describe("sortCues", () => {
     const outcome = runCommand("sortByTimestamp", "[ti:x]\n[00:02.00]b\n[00:01.00]a\n");
     expect(outcome.messages).toEqual([]);
     expect(outcome.edits).toHaveLength(1);
+  });
+
+  it("keeps unrecognized lines attached to their next cue when asked", () => {
+    // The label sticks to the first cue that follows it ([00:05.00]) and
+    // travels with that cue through the sort, staying directly above it.
+    const doc = parseDocument("[00:10.00]b\n[Chorus]\n[00:05.00]a\n");
+    const result = sortCues(doc, { keepUnrecognized: true });
+    expect(result?.edit.newText).toBe("[Chorus]\n[00:05.00]a\n[00:10.00]b\n");
+    expect(result?.droppedLines).toBe(0);
+  });
+
+  it("still drops unrecognized lines with no following cue when keeping", () => {
+    const doc = parseDocument("[Chorus]\n[00:05.00]a\n[00:10.00]b\n[outro]\n");
+    const result = sortCues(doc, { keepUnrecognized: true });
+    expect(result?.edit.newText).toBe("[Chorus]\n[00:05.00]a\n[00:10.00]b\n");
+    expect(result?.droppedLines).toBe(1);
+  });
+
+  it("keeps several labels above the same cue in their original order", () => {
+    const doc = parseDocument("[00:10.00]b\n[Chorus]\n[Verse]\n[00:05.00]a\n");
+    const result = sortCues(doc, { keepUnrecognized: true });
+    expect(result?.edit.newText).toBe("[Chorus]\n[Verse]\n[00:05.00]a\n[00:10.00]b\n");
+    expect(result?.droppedLines).toBe(0);
+  });
+
+  it("combines kept labels with bilingual pairs sharing one timestamp", () => {
+    const doc = parseDocument("[00:10.00]Hello\n[00:10.00]你好\n[Chorus]\n[00:05.00]A\n");
+    const result = sortCues(doc, { keepUnrecognized: true });
+    expect(result?.edit.newText).toBe("[Chorus]\n[00:05.00]A\n[00:10.00]Hello\n[00:10.00]你好\n");
+    expect(result?.droppedLines).toBe(0);
+  });
+
+  it("passes keepUnrecognized through the command layer", () => {
+    const outcome = runCommand("sortByTimestamp", "[00:10.00]b\n[Chorus]\n[00:05.00]a\n", {
+      keepUnrecognized: true,
+    });
+    expect(outcome.messages).toEqual([]);
+    expect(outcome.edits[0]?.newText).toBe("[Chorus]\n[00:05.00]a\n[00:10.00]b\n");
   });
 });
 
@@ -325,8 +364,138 @@ describe("expandMultiStampLines", () => {
   });
 });
 
+describe("mergeBilingualPairs", () => {
+  it("merges adjacent same-time lines keeping the first line's stamp", () => {
+    const text = "[00:10.00]Hello world\n[00:10.00]你好世界\n";
+    const { edits, pairCount, skippedCount } = mergeBilingualPairs(parseDocument(text));
+    expect(pairCount).toBe(1);
+    expect(skippedCount).toBe(0);
+    expect(applyEdits(text, edits)).toBe("[00:10.00]Hello world|你好世界\n");
+  });
+
+  it("absorbs the second line's stamp and inherits the pair's terminator", () => {
+    const text = "[00:9.5]a\r\n[00:09.50]b\r\n";
+    const { edits } = mergeBilingualPairs(parseDocument(text));
+    expect(applyEdits(text, edits)).toBe("[00:9.5]a|b\r\n");
+  });
+
+  it("never merges lines that are not adjacent or not at the same time", () => {
+    expect(mergeBilingualPairs(parseDocument("[00:10.00]a\n[00:20.00]b\n")).pairCount).toBe(0);
+    expect(mergeBilingualPairs(parseDocument("[00:10.00]a\n[ti:x]\n[00:10.00]b\n")).pairCount).toBe(
+      0,
+    );
+    expect(mergeBilingualPairs(parseDocument("[00:10.00]a\n\n[00:10.00]b\n")).pairCount).toBe(0);
+  });
+
+  it("merges only the first two of three same-time lines", () => {
+    const text = "[00:10.00]a\n[00:10.00]b\n[00:10.00]c\n";
+    const { edits, pairCount } = mergeBilingualPairs(parseDocument(text));
+    expect(pairCount).toBe(1);
+    expect(applyEdits(text, edits)).toBe("[00:10.00]a|b\n[00:10.00]c\n");
+  });
+
+  it("refuses pairs it would have to guess about", () => {
+    // Word timings would be deleted by the rewrite.
+    const worded = mergeBilingualPairs(parseDocument("[00:10.00] <00:10.50>a\n[00:10.00]b\n"));
+    expect(worded.pairCount).toBe(0);
+    expect(worded.skippedCount).toBe(1);
+    // A stray label or an extra stamp cannot be attributed to either side.
+    expect(
+      mergeBilingualPairs(parseDocument("[00:10.00][Chorus]a\n[00:10.00]b\n")).skippedCount,
+    ).toBe(1);
+    expect(
+      mergeBilingualPairs(parseDocument("[00:10.00][00:11.00]a\n[00:10.00]b\n")).skippedCount,
+    ).toBe(1);
+    // An empty side is an instrumental marker, not a bilingual pair.
+    expect(mergeBilingualPairs(parseDocument("[00:10.00]\n[00:10.00]b\n")).skippedCount).toBe(1);
+    // An unescaped pipe in the original would corrupt the split-back.
+    expect(mergeBilingualPairs(parseDocument("[00:10.00]a|b\n[00:10.00]c\n")).skippedCount).toBe(1);
+  });
+
+  it("accepts escaped pipes and keeps literal pipes in the translation", () => {
+    const text = "[00:10.00]a\\|b\n[00:10.00]c|d\n";
+    const { edits, skippedCount } = mergeBilingualPairs(parseDocument(text));
+    expect(skippedCount).toBe(0);
+    expect(applyEdits(text, edits)).toBe("[00:10.00]a\\|b|c|d\n");
+  });
+});
+
+describe("splitBilingualLines", () => {
+  it("splits at the first unescaped pipe and inherits the timestamp", () => {
+    const text = "[00:10.00]Hello|你好\n";
+    const { edits, lineCount } = splitBilingualLines(parseDocument(text));
+    expect(lineCount).toBe(1);
+    expect(applyEdits(text, edits)).toBe("[00:10.00]Hello\n[00:10.00]你好\n");
+  });
+
+  it("splits only at the first unescaped pipe, keeping pipes in the translation", () => {
+    const text = "[00:10.00]a\\|b|c|d\n";
+    const { edits } = splitBilingualLines(parseDocument(text));
+    expect(applyEdits(text, edits)).toBe("[00:10.00]a\\|b\n[00:10.00]c|d\n");
+  });
+
+  it("keeps each side's spacing style and uses the line's own terminator", () => {
+    const text = "[00:10.00] Hello | 世界\r\n[00:20.00]b\n";
+    const { edits } = splitBilingualLines(parseDocument(text));
+    expect(applyEdits(text, edits)).toBe("[00:10.00] Hello\r\n[00:10.00]世界\r\n[00:20.00]b\n");
+  });
+
+  it("ignores lines without a usable separator or with extra content", () => {
+    expect(splitBilingualLines(parseDocument("[00:10.00]plain\n")).lineCount).toBe(0);
+    // Several stamps: which one would the second line inherit?
+    expect(splitBilingualLines(parseDocument("[00:10.00][00:20.00]a|b\n")).lineCount).toBe(0);
+    expect(splitBilingualLines(parseDocument("[00:10.00] <00:10.50>a|b\n")).lineCount).toBe(0);
+    // An unknown line's pipe is lyric content, not a separator.
+    expect(splitBilingualLines(parseDocument("plain|prose\n")).lineCount).toBe(0);
+    // A side that ends up empty is not a pair.
+    expect(splitBilingualLines(parseDocument("[00:10.00]a|\n")).lineCount).toBe(0);
+  });
+
+  it("round-trips merge → split back to the original document", () => {
+    const text = "[00:10.00]Hello world\n[00:10.00]你好世界\n[00:20.00]B\n";
+    const merged = applyEdits(text, mergeBilingualPairs(parseDocument(text)).edits);
+    expect(merged).toBe("[00:10.00]Hello world|你好世界\n[00:20.00]B\n");
+    const splitBack = applyEdits(merged, splitBilingualLines(parseDocument(merged)).edits);
+    expect(splitBack).toBe(text);
+  });
+});
+
+describe("invertOffsetSign", () => {
+  it("flips the sign of the first valid offset tag only", () => {
+    const text = "[offset:+500]\n[offset:-200]\n[00:10.00]a\n";
+    const result = invertOffsetSign(parseDocument(text));
+    expect(result?.fromMs).toBe(500);
+    expect(result?.toMs).toBe(-500);
+    expect(applyEdits(text, result!.edits)).toBe("[offset:-500]\n[offset:-200]\n[00:10.00]a\n");
+  });
+
+  it("rewrites negative values with an explicit plus", () => {
+    const text = "[offset:-250]\n";
+    expect(applyEdits(text, invertOffsetSign(parseDocument(text))!.edits)).toBe("[offset:+250]\n");
+  });
+
+  it("flips unsigned values too and reaches tags sharing a line", () => {
+    const text = "[ti:x][offset:500]\n[00:10.00]a\n";
+    const result = invertOffsetSign(parseDocument(text));
+    expect(applyEdits(text, result!.edits)).toBe("[ti:x][offset:-500]\n[00:10.00]a\n");
+  });
+
+  it("returns null without a valid offset tag", () => {
+    expect(invertOffsetSign(parseDocument("[00:01.00]a\n"))).toBeNull();
+    expect(invertOffsetSign(parseDocument("[offset:abc]\n"))).toBeNull();
+  });
+
+  it("reports the flip through the command layer", () => {
+    const outcome = runCommand("invertOffsetSign", "[offset:+500]\n[00:10.00]a\n");
+    expect(outcome.edits[0]?.newText).toBe("-500");
+    expect(outcome.messages[0]).toContain("+500 → -500");
+  });
+});
+
 describe("computeStats", () => {
-  const text = "[ti:x]\n[offset:+1000]\n[00:10.00]a\n[00:10.00]b\n[00:40.00]c\n";
+  // The repeated text makes the pair a true duplicate: different texts at the
+  // same start would be the bilingual convention and must not count.
+  const text = "[ti:x]\n[offset:+1000]\n[00:10.00]a\n[00:10.00]a\n[00:40.00]c\n";
 
   it("counts cues, tags, duplicates and gaps under the offset", () => {
     const stats = computeStats(parseDocument(text), 8);
@@ -336,6 +505,23 @@ describe("computeStats", () => {
     expect(stats.effectiveTimesMs).toEqual([9_000, 39_000]);
     expect(stats.durationMs).toBe(30_000);
     expect(stats.gaps).toEqual([{ fromMs: 9_000, toMs: 39_000, durationMs: 30_000 }]);
+  });
+
+  it("does not inflate duplicates for bilingual pairs with different texts", () => {
+    const stats = computeStats(
+      parseDocument("[00:10.00]Hello\n[00:10.00]你好\n[00:20.00]A\n[00:20.00]B\n"),
+      8,
+    );
+    expect(stats.duplicateTimestampCount).toBe(0);
+    expect(stats.cueCount).toBe(4);
+  });
+
+  it("still counts true duplicates alongside bilingual pairs", () => {
+    const stats = computeStats(
+      parseDocument("[00:10.00]Hello\n[00:10.00]你好\n[00:20.00]chorus\n[00:20.00]chorus\n"),
+      8,
+    );
+    expect(stats.duplicateTimestampCount).toBe(1);
   });
 
   it("honours the threshold", () => {
@@ -396,12 +582,33 @@ describe("runCommand", () => {
     expect(outcome.edits[0]?.newText).toBe("word");
     expect(outcome.messages[0]).toContain("Converted 1 line(s)");
   });
+
+  it("merges and splits bilingual lines through the command layer", () => {
+    const merged = runCommand("mergeBilingualLines", "[00:10.00]a\n[00:10.00]b\n");
+    expect(merged.messages[0]).toContain("Merged 1 bilingual pair(s)");
+    const split = runCommand("splitBilingualLines", "[00:10.00]a|b\n");
+    expect(split.messages[0]).toContain("Split 1 line(s)");
+    expect(runCommand("mergeBilingualLines", "[00:10.00]a\n[00:20.00]b\n").messages[0]).toContain(
+      "No adjacent same-time bilingual pairs",
+    );
+    expect(runCommand("splitBilingualLines", "[00:10.00]plain\n").messages[0]).toContain(
+      "No lines with an unescaped '|' separator",
+    );
+  });
+
+  it("explains when there is no offset tag to invert", () => {
+    const outcome = runCommand("invertOffsetSign", "[00:01.00]a\n");
+    expect(outcome.edits).toHaveLength(0);
+    expect(outcome.messages[0]).toContain("nothing to invert");
+  });
 });
 
 describe("isCommandId", () => {
   it("accepts known ids and rejects unknown ones", () => {
     expect(isCommandId("sortByTimestamp")).toBe(true);
     expect(isCommandId("showStats")).toBe(true);
+    expect(isCommandId("mergeBilingualLines")).toBe(true);
+    expect(isCommandId("invertOffsetSign")).toBe(true);
     expect(isCommandId("somethingElse")).toBe(false);
   });
 });

@@ -6,6 +6,38 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- Bilingual tools following the community `original|translation` convention: `Merge Bilingual
+  Lines` turns two adjacent cue lines sharing one timestamp into a single line (timestamp from
+  the first line, second line treated as the translation), and `Split Bilingual Lines` splits
+  merged lines back apart at the first unescaped `|` with both sides inheriting the timestamp.
+  The pipe is a convention, not a format feature, so both operations are explicit commands —
+  nothing runs automatically, and pairs the merge would have to guess about are reported as
+  skipped, never rewritten.
+- `Invert [offset:] Sign` flips the sign of the first valid `[offset:]` tag (e.g. `+500` →
+  `-500`) without touching any timestamp — for players that interpret the offset direction the
+  other way round (see ADR 0004).
+- New `suspected-encoding` info diagnostic: three or more U+FFFD replacement characters suggest
+  the file was read in the wrong encoding; one hint per document, anchored on the first
+  occurrence, pointing at the built-in "Reopen with Encoding" / "Change File Encoding"
+  commands. This extends the stable 12-code diagnostic promise of 0.1.0 to 13 codes.
+- Quick fixes: a timestamp whose seconds exceed 59 (`[01:75.00]`) now offers to carry the
+  excess seconds into the minutes (→ `[02:15.00]`) or to clamp them to 59 (→ `[01:59.00]`),
+  and a word timing that starts before its line's cue offers to align with the line's start
+  timestamp.
+- New setting `lrcToolkit.sort.keepSectionLabels` (default `false` = previous behavior): when
+  sorting, keep standalone section labels instead of dropping them — each label travels with
+  the first cue line that follows it and is re-sorted together with that cue.
+
+### Fixed
+
+- Document statistics no longer count the bilingual pairing convention as duplicate timestamps:
+  adjacent same-start pairs with different texts are expected (matching the analyzer's
+  once-per-document hint), and only pairs with identical texts still count as true duplicates.
+  Statistics also document that each cue line contributes only its first timestamp to the
+  timeline.
+
 ## [0.1.2] - 2026-11-08
 
 ### Fixed

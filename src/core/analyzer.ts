@@ -14,20 +14,79 @@
  *  - word-timing-before-cue  (warning) word timing starts before its line's timestamp
  *  - word-timing-disorder    (warning) word timings are not ascending
  *  - invalid-word-timing     (warning) `<...>` token looks like a word timing but is malformed
+ *  - suspected-encoding      (info)    lyric text contains U+FFFD replacement characters
  */
 
-import type { CueLine, LrcDiagnostic, LrcDocument, TagLine } from "./model";
+import type {
+  BracketSpan,
+  CueLine,
+  DiagnosticFix,
+  LrcDiagnostic,
+  LrcDocument,
+  TagLine,
+} from "./model";
 import { allTags } from "./model";
-import { parseStampBody } from "../util/time";
+import { formatStamp, parseOutOfRangeStamp, parseStampBody } from "../util/time";
 
 export const OFFSET_VALUE = /^[+-]?\d+$/;
 
 /** Tags that carry human-readable content and should not be empty. */
 const CONTENT_TAGS = new Set(["ti", "ar", "al", "au", "length", "by"]);
 
+/**
+ * A lyric file read with the wrong encoding shows U+FFFD replacement
+ * characters. Three or more make an encoding accident overwhelmingly likely
+ * (one or two may be a stray paste), so the document gets a single
+ * actionable info diagnostic pointing at the first occurrence.
+ */
+const ENCODING_SUSPECT_THRESHOLD = 3;
+
 /** Display time of a stamp under the documented offset convention (ADR 0004). */
 function effectiveMs(stampTotalMs: number, offsetMs: number): number {
   return stampTotalMs - offsetMs;
+}
+
+/** Count non-overlapping occurrences of `needle` in `text`. */
+function countOccurrences(text: string, needle: string): number {
+  let count = 0;
+  let at = text.indexOf(needle);
+  while (at !== -1) {
+    count++;
+    at = text.indexOf(needle, at + needle.length);
+  }
+  return count;
+}
+
+/**
+ * The two optional repairs for a seconds-out-of-range timestamp (`01:75.00`):
+ * carry the excess seconds into the minutes (→ `02:15.00`) or clamp the
+ * seconds to 59 (→ `01:59.00`). Both previews are built with the shared
+ * parse/format primitives from util/time.ts, so the shown text is exactly
+ * what the edit applies. Returns undefined for other malformed shapes.
+ */
+function outOfRangeFixes(span: BracketSpan, body: string): DiagnosticFix[] | undefined {
+  const parsed = parseOutOfRangeStamp(body);
+  if (!parsed) {
+    return undefined;
+  }
+  const { minutes, seconds, fractionMs, fractionDigits } = parsed;
+  const carriedMs = (minutes * 60 + seconds) * 1000 + fractionMs;
+  const fixes: DiagnosticFix[] = [];
+  // Carrying must not produce a five-digit minute stamp the parser would
+  // reject (9999:75 would carry into 10000:15); clamping never overflows.
+  if (Math.floor(carriedMs / 60_000) <= 9999) {
+    const carried = `[${formatStamp(carriedMs, fractionDigits)}]`;
+    fixes.push({
+      title: `Carry excess seconds into the minutes (→ ${carried})`,
+      edits: [{ start: span.start, end: span.end, newText: carried }],
+    });
+  }
+  const clamped = `[${formatStamp(minutes * 60_000 + 59_000 + fractionMs, fractionDigits)}]`;
+  fixes.push({
+    title: `Clamp the seconds to 59 (→ ${clamped})`,
+    edits: [{ start: span.start, end: span.end, newText: clamped }],
+  });
+  return fixes;
 }
 
 /**
@@ -90,6 +149,7 @@ function analyzeCue(
         code: "invalid-timestamp",
         message:
           "Malformed timestamp — minutes may be 0–999 but seconds must stay within 0–59, e.g. [01:23.45].",
+        fixes: outOfRangeFixes(token, doc.text.slice(token.start + 1, token.end - 1)),
       });
     }
   }
@@ -116,6 +176,9 @@ function analyzeCue(
       message: parsed.ok
         ? "A valid timestamp sits inside the lyric text — move it to its own line or expand the line."
         : "Malformed timestamp inside the lyric text — seconds must stay within 0–59, e.g. [01:23.45].",
+      // Only genuinely out-of-range bodies get repairs; a valid buried stamp
+      // needs restructuring (expand), not a numeric patch.
+      fixes: parsed.ok ? undefined : outOfRangeFixes(span, body),
     });
   }
 
@@ -139,7 +202,7 @@ function analyzeCue(
         code: "decreasing-timestamp",
         message:
           "This timestamp is earlier than the previous one on the same line — expand the line first, then sort.",
-        fix: { title: "Expand multi-timestamp lines", command: "expandMultiStampLines" },
+        fixes: [{ title: "Expand multi-timestamp lines", command: "expandMultiStampLines" }],
       });
     } else if (currentMs === previous.stamp.totalMs) {
       issues.push({
@@ -157,12 +220,21 @@ function analyzeCue(
   let previousWordMs: number | null = null;
   for (const word of line.wordTimings) {
     if (word.stamp.totalMs < cueStart) {
+      // cueStart is always a real stamp here: cue lines without stamps are
+      // rejected before this loop, and a stamp of 0 can never be undercut.
+      const aligned = `<${formatStamp(cueStart, word.stamp.fractionDigits)}>`;
       issues.push({
         start: word.start,
         end: word.end,
         severity: "warning",
         code: "word-timing-before-cue",
         message: "This word timing starts before its line's timestamp.",
+        fixes: [
+          {
+            title: `Align with the line's start timestamp (→ ${aligned})`,
+            edits: [{ start: word.start, end: word.end, newText: aligned }],
+          },
+        ],
       });
     }
     if (previousWordMs !== null && word.stamp.totalMs < previousWordMs) {
@@ -189,9 +261,13 @@ function analyzeCue(
           severity: "warning",
           code: "decreasing-timestamp",
           message: "This line starts earlier than the previous one — the lyric timeline is broken.",
-          fix: { title: "Sort all lines by timestamp", command: "sortByTimestamp" },
+          fixes: [{ title: "Sort all lines by timestamp", command: "sortByTimestamp" }],
         });
       } else if (start === state.prevEffective && !state.reportedDuplicate) {
+        // Reported once per document: the community bilingual convention
+        // (original + translation sharing one timestamp) is expected, and
+        // statistics exclude such pairs for the same reason — see
+        // duplicateTimestampCount in services/stats.ts for the classification.
         issues.push({
           start: first.start,
           end: first.end,
@@ -269,6 +345,7 @@ export function analyze(doc: LrcDocument): LrcDiagnostic[] {
               code: "invalid-timestamp",
               message:
                 "Malformed timestamp — seconds must stay within 0–59 and the fraction may carry 1–3 digits, e.g. [01:23.45].",
+              fixes: outOfRangeFixes(token, doc.text.slice(token.start + 1, token.end - 1)),
             });
           } else {
             issues.push({
@@ -285,6 +362,24 @@ export function analyze(doc: LrcDocument): LrcDiagnostic[] {
       }
       case "blank":
         break;
+    }
+  }
+
+  // Whole-document check: a lyric file that renders with U+FFFD replacement
+  // characters was almost certainly read in the wrong encoding. One info per
+  // document, anchored on the first occurrence so clicking it lands somewhere
+  // useful; the message names the built-in commands that fix it.
+  const firstReplacement = doc.text.indexOf("\uFFFD");
+  if (firstReplacement !== -1) {
+    const count = countOccurrences(doc.text, "\uFFFD");
+    if (count >= ENCODING_SUSPECT_THRESHOLD) {
+      issues.push({
+        start: firstReplacement,
+        end: firstReplacement + 1,
+        severity: "info",
+        code: "suspected-encoding",
+        message: `${count} replacement characters (U+FFFD) found — the file was most likely read in the wrong encoding. Use "Reopen with Encoding" or "Change File Encoding" from the Command Palette to display it correctly.`,
+      });
     }
   }
   return issues;

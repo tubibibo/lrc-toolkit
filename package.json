@@ -79,6 +79,11 @@
           "type": "boolean",
           "default": false,
           "description": "When formatting, normalize to exactly one space between the timestamp and the lyric text."
+        },
+        "lrcToolkit.sort.keepSectionLabels": {
+          "type": "boolean",
+          "default": false,
+          "description": "When sorting, keep standalone section labels ([Chorus], [Verse], …) instead of dropping them: each label travels with the first cue line that follows it and is re-sorted together with that cue."
         }
       }
     },
@@ -110,6 +115,18 @@
       {
         "command": "lrcToolkit.showStats",
         "title": "LRC: Show Document Statistics"
+      },
+      {
+        "command": "lrcToolkit.mergeBilingualLines",
+        "title": "LRC: Merge Bilingual Lines (original|translation)"
+      },
+      {
+        "command": "lrcToolkit.splitBilingualLines",
+        "title": "LRC: Split Bilingual Lines at '|'"
+      },
+      {
+        "command": "lrcToolkit.invertOffsetSign",
+        "title": "LRC: Invert [offset:] Sign"
       }
     ],
     "menus": {
@@ -157,6 +174,18 @@
         },
         {
           "command": "lrcToolkit.showStats",
+          "when": "resourceLangId == lrc"
+        },
+        {
+          "command": "lrcToolkit.mergeBilingualLines",
+          "when": "resourceLangId == lrc"
+        },
+        {
+          "command": "lrcToolkit.splitBilingualLines",
+          "when": "resourceLangId == lrc"
+        },
+        {
+          "command": "lrcToolkit.invertOffsetSign",
           "when": "resourceLangId == lrc"
         }
       ]

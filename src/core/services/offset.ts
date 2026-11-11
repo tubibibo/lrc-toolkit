@@ -83,3 +83,43 @@ export function applyOffsetTag(doc: LrcDocument): ApplyOffsetResult | null {
     remainingOffsetTags: validCount - 1,
   };
 }
+
+export interface InvertOffsetResult {
+  edits: TextEdit[];
+  /** Offset value before the flip, in milliseconds. */
+  fromMs: number;
+  /** Offset value after the flip, in milliseconds. */
+  toMs: number;
+}
+
+/**
+ * Flip the sign of the first valid `[offset:]` tag (`+500` → `-500`) and
+ * leave every other tag and all timestamps untouched. Some players interpret
+ * the offset direction the other way round (ADR 0004); this command adapts
+ * an existing tag for them without baking anything into the timestamps.
+ * The rewritten value always carries an explicit sign, matching the
+ * documented `[offset:+500]` style.
+ */
+export function invertOffsetSign(doc: LrcDocument): InvertOffsetResult | null {
+  for (const line of doc.lines) {
+    if (line.kind !== "tag") {
+      continue;
+    }
+    for (const tag of allTags(line)) {
+      if (tag.key !== "offset" || !OFFSET_VALUE.test(tag.value.trim())) {
+        continue;
+      }
+      // First valid tag wins — the same resolution order as resolveOffset
+      // and applyOffsetTag.
+      const fromMs = Number(tag.value.trim());
+      const toMs = -fromMs;
+      const newText = toMs > 0 ? `+${toMs}` : String(toMs);
+      return {
+        edits: [{ start: tag.valueSpan.start, end: tag.valueSpan.end, newText }],
+        fromMs,
+        toMs,
+      };
+    }
+  }
+  return null;
+}

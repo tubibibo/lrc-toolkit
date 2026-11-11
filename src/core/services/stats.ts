@@ -17,6 +17,7 @@ export function computeStats(doc: LrcDocument, gapThresholdSeconds: number): Doc
   let duplicateTimestampCount = 0;
   const timesMs: number[] = [];
   let previousTime: number | null = null;
+  let previousText: string | null = null;
 
   for (const line of doc.lines) {
     if (line.kind === "tag") {
@@ -30,16 +31,26 @@ export function computeStats(doc: LrcDocument, gapThresholdSeconds: number): Doc
     if (line.wordTimings.length > 0) {
       wordTimedLineCount++;
     }
+    // Only a line's FIRST stamp feeds the timeline — within-line duplicates
+    // are the analyzer's business, and later stamps never start a new beat.
     const first = line.stamps[0];
     if (!first) {
       continue;
     }
     const time = first.stamp.totalMs - offsetMs;
     timesMs.push(time);
-    if (previousTime === time) {
+    // Same classification problem the analyzer solves for its once-per-
+    // document duplicate-timestamp hint: two adjacent cue lines starting at
+    // the same effective time are usually the bilingual pairing convention
+    // (original + translation, different texts), not an accident. Count a
+    // pair as a true duplicate only when its trimmed texts are identical;
+    // this keeps bilingual files from inflating the count.
+    const text = line.text.trim();
+    if (previousTime === time && previousText !== null && previousText === text) {
       duplicateTimestampCount++;
     }
     previousTime = time;
+    previousText = text;
   }
 
   const sorted = [...new Set(timesMs)].sort((a, b) => a - b);

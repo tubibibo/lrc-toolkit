@@ -47,6 +47,41 @@ export function looksLikeStampBody(raw: string): boolean {
   return /^\d{1,4}\s*:\s*\d{1,4}(\.\d+)?$/.test(raw.trim());
 }
 
+/** Decomposition of a stamp body whose seconds exceed 59, used for repair edits. */
+export interface OutOfRangeStamp {
+  minutes: number;
+  seconds: number;
+  fractionMs: number;
+  fractionDigits: FractionDigits;
+}
+
+/**
+ * Parse a stamp body whose seconds are out of range (`01:75.00`) — the only
+ * malformed-timestamp shape the analyzer offers "repair" quick fixes for.
+ * Returns null for bodies the shared {@link STAMP_PATTERN} does not accept
+ * (wrong digit counts, garbage) or whose seconds are within 0–59.
+ */
+export function parseOutOfRangeStamp(raw: string): OutOfRangeStamp | null {
+  const match = STAMP_PATTERN.exec(raw);
+  const minutesRaw = match?.[1];
+  const secondsRaw = match?.[2];
+  if (!match || !minutesRaw || !secondsRaw || Number(secondsRaw) <= 59) {
+    return null;
+  }
+  const fractionRaw = match[3];
+  const fractionDigits = (fractionRaw?.length ?? 0) as FractionDigits;
+  const fractionMs =
+    fractionDigits === 0 || !fractionRaw
+      ? 0
+      : Number(fractionRaw) * Math.pow(10, 3 - fractionDigits);
+  return {
+    minutes: Number(minutesRaw),
+    seconds: Number(secondsRaw),
+    fractionMs,
+    fractionDigits,
+  };
+}
+
 /** Render milliseconds as `mm:ss` / `mm:ss.x` / `mm:ss.xx` / `mm:ss.xxx`. */
 export function formatStamp(totalMs: number, fractionDigits: FractionDigits): string {
   const ms = Math.max(0, Math.trunc(totalMs));

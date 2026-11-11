@@ -21,7 +21,7 @@ See [docs/research.md](docs/research.md) for the survey.
 | Feature | Details |
 | --- | --- |
 | Syntax highlighting | Timestamps, metadata tags and enhanced (word-level) timings; malformed brackets are flagged inline |
-| Live diagnostics | 12 stable diagnostic codes for broken timelines, malformed timestamps/tags, bad word timings, offset problems (see below) |
+| Live diagnostics | 13 stable diagnostic codes for broken timelines, malformed timestamps/tags, bad word timings, offset problems, wrong file encodings (see below) |
 | Timestamp hover | Absolute time, effective time under `[offset:]`, delta to the previous line and instrumental-gap detection |
 | Tag hover | Explains every standard metadata tag |
 | Document outline | Metadata tags and every cue line appear in the symbol outline |
@@ -35,17 +35,23 @@ See [docs/research.md](docs/research.md) for the survey.
 | `LRC: Sort Lines by Timestamp` | Stable-sorts cue lines; tags stay on top; ties keep their order. Unrecognized lines and interior blank lines are removed — the result message reports how many |
 | `LRC: Shift All Timestamps…` | Shifts every timestamp by ±N ms (clamps at 00:00.00) |
 | `LRC: Apply [offset:] Tag into Timestamps` | Bakes the offset into raw timestamps and removes the tag |
+| `LRC: Invert [offset:] Sign` | Flips the sign of the first valid `[offset:]` tag (timestamps untouched) — for players that read the direction the other way |
 | `LRC: Normalize Timestamp Precision…` | Rewrites every timestamp to 2-digit (centiseconds) or 3-digit (milliseconds) precision |
 | `LRC: Strip Enhanced (Word-Level) Timings` | Converts enhanced LRC back to plain LRC |
 | `LRC: Expand Multi-Timestamp Lines` | `[00:01][00:02] text` → one line per timestamp |
+| `LRC: Merge Bilingual Lines (original\|translation)` | Two adjacent cue lines sharing one timestamp → one `original\|translation` line (timestamp from the first line) |
+| `LRC: Split Bilingual Lines at '\|'` | Merged bilingual lines → two timestamped lines, split at the first unescaped `\|` |
 | `LRC: Show Document Statistics` | Cue count, duration, instrumental gaps, duplicates (in the `LRC Toolkit` output channel) |
 
 Standalone section labels such as `[Chorus]` and `[Verse]` are unrecognized
 lines, not metadata tags or timed cues. **Sort Lines by Timestamp removes
 them** and reports the number of dropped lines; it does not move section
 labels with a lyric block. Keep a copy before sorting lyrics that use these
-labels, or use Undo to restore them. A timestamped label such as
-`[00:12.00][Chorus]` is cue text and remains with its timestamp.
+labels, or use Undo to restore them. To keep the labels instead, enable
+`lrcToolkit.sort.keepSectionLabels`: each label then travels with the first
+cue line that follows it and is re-sorted together with that cue. A
+timestamped label such as `[00:12.00][Chorus]` is cue text and remains with
+its timestamp.
 
 ### Diagnostics
 
@@ -63,10 +69,15 @@ labels, or use Undo to restore them. A timestamped label such as
 | `duplicate-timestamp` | info | A line starts exactly where the previous one does |
 | `empty-cue-text` | info | Timestamp without lyric text (fine for instrumentals) |
 | `empty-tag-value` | info | A content tag (`ti`, `ar`, …) carries no value |
+| `suspected-encoding` | info | 3+ replacement characters (U+FFFD) — the file was likely read in the wrong encoding |
 
 The common bilingual convention of two consecutive lines sharing one timestamp is supported:
 sorting keeps each pair together, and the analyzer emits at most one informational hint per
-document for these shared start times.
+document for these shared start times. `Merge Bilingual Lines` / `Split Bilingual Lines`
+implement the matching `original|translation` convention as explicit commands, and statistics
+treat such pairs as expected rather than counting them as duplicate timestamps. A timestamp
+with seconds above 59 (e.g. `[01:75.00]`) offers two quick fixes: carry the excess seconds
+into the minutes, or clamp them to 59.
 
 ### Settings
 
@@ -74,6 +85,7 @@ document for these shared start times.
 | --- | --- | --- |
 | `lrcToolkit.gapThresholdSeconds` | `8` | Gaps longer than this are flagged as instrumental (hover & statistics) |
 | `lrcToolkit.format.spaceAfterTimestamp` | `false` | Formatter emits exactly one space between timestamp and text |
+| `lrcToolkit.sort.keepSectionLabels` | `false` | Sorting keeps standalone section labels, each glued to the first cue line that follows it |
 
 ### The `[offset:]` convention
 
@@ -82,7 +94,8 @@ Per the [LRC format description](https://en.wikipedia.org/wiki/LRC_(file_format)
 follows this convention everywhere (hovers, statistics, and the *Apply offset* command).
 Note that some players interpret the sign the other way — [ADR 0004](docs/adr/0004-offset-sign-convention.md)
 documents the decision and the caveats. When in doubt, use *Shift All Timestamps* which shifts
-raw values explicitly.
+raw values explicitly, or *Invert [offset:] Sign* to flip an existing tag without touching the
+timestamps.
 
 ## Installation
 
@@ -153,13 +166,19 @@ adopts the [Contributor Covenant](CODE_OF_CONDUCT.md).
 
 **LRC Toolkit** 是一个面向 LRC（同步歌词）文件的轻量级 VS Code 插件。LRC 是各大音乐播放器
 （foobar2000、Poweramp、网易云等）通用的行级同步歌词格式，但编辑器生态长期缺乏完善支持。
-本插件提供：语法高亮、12 类实时诊断（时间轴倒退、时间戳非法、逐词时间乱序等）、时间戳悬停
-信息（绝对时间、offset 换算、与前句间隔、间奏检测）、时间轴排序、时间戳整体平移、offset
-标签烘焙、精度归一化、逐词时间剥离、多时间戳行展开、文档统计与格式化。
+本插件提供：语法高亮、13 类实时诊断（时间轴倒退、时间戳非法、逐词时间乱序、疑似编码错误等）、
+时间戳悬停信息（绝对时间、offset 换算、与前句间隔、间奏检测）、时间轴排序、时间戳整体平移、
+offset 标签烘焙、精度归一化、逐词时间剥离、多时间戳行展开、双语行合并与拆分（`原文|译文`）、
+文档统计与格式化。
+
+方向约定：按通用规范，正 `[offset:]` 让歌词**提前**显示（显示时间 = 时间戳 − offset，
+见 [ADR 0004](docs/adr/0004-offset-sign-convention.md)）；个别播放器方向相反，此时可用
+"反转 offset 符号" 命令翻转标签，时间戳保持不动。
 
 排序会移除独立的 `[Chorus]`、`[Verse]` 等无时间戳段落标记，并在结果消息中提示丢弃行数；
-不会将这些标记随歌词块移动。排序前请保留副本，或使用撤销恢复。带时间戳的标记（如
-`[00:12.00][Chorus]`）作为歌词文本保留。
+不会将这些标记随歌词块移动。排序前请保留副本，或使用撤销恢复；也可启用
+`lrcToolkit.sort.keepSectionLabels`，让每个标记吸附到其后第一个歌词行一并重排。带时间戳的
+标记（如 `[00:12.00][Chorus]`）作为歌词文本保留。
 
 架构上采用“无框架核心 + 薄适配层”分层（核心层通过 ESLint 强制禁止依赖 `vscode`），
 零运行时依赖，打包后约 27 KB。详细设计见 [docs/design.md](docs/design.md)。

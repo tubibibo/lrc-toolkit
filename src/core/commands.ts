@@ -8,9 +8,10 @@ import type { FractionDigits, TextEdit } from "./model";
 import { parseDocument } from "./parser";
 import { sortCues } from "./services/sort";
 import { shiftTimestamps } from "./services/shift";
-import { applyOffsetTag } from "./services/offset";
+import { applyOffsetTag, invertOffsetSign } from "./services/offset";
 import { normalizePrecision } from "./services/normalize";
 import { expandMultiStampLines, stripWordTimings } from "./services/convert";
+import { mergeBilingualPairs, splitBilingualLines } from "./services/bilingual";
 import { computeStats, formatStatsReport } from "./services/stats";
 
 export const COMMAND_IDS = [
@@ -21,6 +22,9 @@ export const COMMAND_IDS = [
   "stripWordTimings",
   "expandMultiStampLines",
   "showStats",
+  "mergeBilingualLines",
+  "splitBilingualLines",
+  "invertOffsetSign",
 ] as const;
 
 export type CommandId = (typeof COMMAND_IDS)[number];
@@ -36,6 +40,8 @@ export interface CommandOptions {
   precision?: FractionDigits;
   /** For `showStats` gap detection. */
   gapThresholdSeconds?: number;
+  /** For `sortByTimestamp`: keep unrecognized lines attached to their next cue. */
+  keepUnrecognized?: boolean;
 }
 
 export interface CommandOutcome {
@@ -46,6 +52,11 @@ export interface CommandOutcome {
 
 function parseText(text: string) {
   return parseDocument(text);
+}
+
+/** Render a millisecond value with an explicit sign, e.g. `+500` / `-250`. */
+function signed(ms: number): string {
+  return ms > 0 ? `+${ms}` : String(ms);
 }
 
 /**
@@ -61,7 +72,7 @@ export function runCommand(
 
   switch (id) {
     case "sortByTimestamp": {
-      const result = sortCues(doc);
+      const result = sortCues(doc, { keepUnrecognized: options.keepUnrecognized === true });
       if (!result) {
         return { edits: [], messages: ["No timestamped lines to sort."] };
       }
@@ -151,6 +162,47 @@ export function runCommand(
       const threshold = Math.max(0, options.gapThresholdSeconds ?? 8);
       const stats = computeStats(doc, threshold);
       return { edits: [], messages: formatStatsReport(stats, threshold) };
+    }
+
+    case "mergeBilingualLines": {
+      const { edits, pairCount, skippedCount } = mergeBilingualPairs(doc);
+      const messages: string[] = [];
+      if (pairCount > 0) {
+        messages.push(`Merged ${pairCount} bilingual pair(s) into single lines.`);
+      }
+      if (skippedCount > 0) {
+        messages.push(
+          `Skipped ${skippedCount} same-time pair(s) with word timings, stray labels, an empty side or an ambiguous '|' — merge them manually.`,
+        );
+      }
+      if (messages.length === 0) {
+        messages.push("No adjacent same-time bilingual pairs found.");
+      }
+      return { edits, messages };
+    }
+
+    case "splitBilingualLines": {
+      const { edits, lineCount } = splitBilingualLines(doc);
+      return {
+        edits,
+        messages:
+          lineCount === 0
+            ? ["No lines with an unescaped '|' separator found."]
+            : [`Split ${lineCount} line(s) into timestamped bilingual pairs.`],
+      };
+    }
+
+    case "invertOffsetSign": {
+      const result = invertOffsetSign(doc);
+      if (!result) {
+        return { edits: [], messages: ["No valid [offset:] tag found — nothing to invert."] };
+      }
+      return {
+        edits: result.edits,
+        messages: [
+          `Inverted the [offset:] tag: ${signed(result.fromMs)} → ${signed(result.toMs)} ms. Timestamps were not touched.`,
+        ],
+      };
     }
   }
 }

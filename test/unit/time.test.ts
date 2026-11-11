@@ -4,6 +4,7 @@ import {
   formatClock,
   formatStamp,
   looksLikeStampBody,
+  parseOutOfRangeStamp,
   parseStampBody,
   roundToPrecision,
 } from "../../src/util/time";
@@ -59,6 +60,30 @@ describe("looksLikeStampBody", () => {
     expect(looksLikeStampBody("abc")).toBe(false);
     expect(looksLikeStampBody("")).toBe(false);
     expect(looksLikeStampBody("ti:Title")).toBe(false);
+  });
+});
+
+describe("parseOutOfRangeStamp", () => {
+  it("decomposes a seconds-out-of-range body", () => {
+    expect(parseOutOfRangeStamp("01:75.00")).toEqual({
+      minutes: 1,
+      seconds: 75,
+      fractionMs: 0,
+      fractionDigits: 2,
+    });
+    expect(parseOutOfRangeStamp("01:75.5")).toEqual({
+      minutes: 1,
+      seconds: 75,
+      fractionMs: 500,
+      fractionDigits: 1,
+    });
+  });
+
+  it("returns null for in-range seconds and other malformed shapes", () => {
+    expect(parseOutOfRangeStamp("01:59.99")).toBeNull();
+    expect(parseOutOfRangeStamp("01:60.1234")).toBeNull(); // 4-digit fraction: "format", not repairable
+    expect(parseOutOfRangeStamp("1:2:3")).toBeNull();
+    expect(parseOutOfRangeStamp("ti:Title")).toBeNull();
   });
 });
 

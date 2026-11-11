@@ -26,6 +26,7 @@ export function registerCommands(store: DocumentStore): vscode.Disposable[] {
     const settings = getSettings();
     const outcome = runCommand(commandId, editor.document.getText(), {
       gapThresholdSeconds: settings.gapThresholdSeconds,
+      keepUnrecognized: settings.sortKeepSectionLabels,
       ...extra,
     });
     if (outcome.edits.length > 0) {
@@ -101,6 +102,9 @@ export function registerCommands(store: DocumentStore): vscode.Disposable[] {
     ["lrcToolkit.stripWordTimings", () => execute("stripWordTimings")],
     ["lrcToolkit.expandMultiStampLines", () => execute("expandMultiStampLines")],
     ["lrcToolkit.showStats", executeStats],
+    ["lrcToolkit.mergeBilingualLines", () => execute("mergeBilingualLines")],
+    ["lrcToolkit.splitBilingualLines", () => execute("splitBilingualLines")],
+    ["lrcToolkit.invertOffsetSign", () => execute("invertOffsetSign")],
   ];
 
   return [

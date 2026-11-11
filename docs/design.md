@@ -57,7 +57,7 @@ Rules that make the layering enforceable, not aspirational:
 | `src/core/parser.ts` | Raw text → `LrcDocument`; classifies tokens, never judges them | model, util/time |
 | `src/core/analyzer.ts` | `LrcDocument` → diagnostics; offset resolution | model, util/time |
 | `src/core/hover.ts` | Structured hover targets (timestamp / word timing / tag) | model, analyzer |
-| `src/core/services/*` | Deterministic transformations returning `TextEdit[]` | parser, analyzer, util/time |
+| `src/core/services/*` | Deterministic transformations returning `TextEdit[]` (sort / shift / offset / normalize / convert / bilingual / stats) | parser, analyzer, util/time |
 | `src/core/commands.ts` | Command registry: `runCommand(id, text, options)` → edits + messages | parser, services |
 | `src/vscode-host/*` | Providers, command registration, diagnostics collection, settings | core (index only) |
 
@@ -88,6 +88,38 @@ Rules that make the layering enforceable, not aspirational:
 | `duplicate-timestamp` | info | Adjacent cue lines / stamps with equal times (cross-line duplicates are reported **once per document** — bilingual pairings are expected; within-line duplicates report per line) |
 | `empty-cue-text` | info | Timestamp with no lyric text |
 | `empty-tag-value` | info | Content tags (`ti`, `ar`, `al`, `au`, `length`, `by`) with empty value — including tags sharing a line |
+| `suspected-encoding` | info | 3 or more U+FFFD replacement characters in the document — reported **once per document**, anchored on the first occurrence; the message names the built-in *Reopen with Encoding* / *Change File Encoding* commands. One or two characters may be a paste artifact and stay silent |
+
+### Quick fixes
+
+Diagnostics may carry several quick fixes, each rendered as its own CodeAction:
+
+- `decreasing-timestamp` → *sort* (cross-line) or *expand multi-timestamp lines* (within line),
+  as command-type fixes;
+- `invalid-timestamp` whose seconds exceed 59 (`[01:75.00]`) → **carry** the excess seconds into
+  the minutes (→ `[02:15.00]`) or **clamp** them to 59 (→ `[01:59.00]`), as edit-type fixes built
+  from the shared parse/format primitives in `util/time.ts`. The carry variant is withheld when
+  it would overflow the four-digit minute budget (9999:75 → 10000:15 would be unparseable);
+- `word-timing-before-cue` → align the word timing with its line's start timestamp, rendered at
+  the word timing's own fraction-digit count.
+
+### Bilingual pairs (`original|translation`)
+
+The community convention for bilingual lyrics — two consecutive cue lines sharing one timestamp,
+the **second line being the translation** — is supported in three places:
+
+- sorting keeps each pair together (stable sort on raw timestamps);
+- the analyzer emits at most one `duplicate-timestamp` hint per document;
+- `Merge Bilingual Lines` merges adjacent same-time pairs into one `original|translation` line
+  (timestamp taken verbatim from the first line, the pair's own terminator kept); `Split
+  Bilingual Lines` splits lines back apart at the **first unescaped `|`** (a `\|` escape or
+  trailing backslash is honoured), both sides inheriting the timestamp verbatim.
+
+The pipe is a community convention, not part of the format: both operations are explicit
+commands and never run automatically. Merging refuses (and reports) any pair it would have to
+guess about: word timings, stray labels, extra stamps, an empty side, or an unescaped `|`
+already present in the original text — the toolkit never deletes or rewrites lyric content
+silently.
 
 ## Bracket rendering policy
 
@@ -119,6 +151,30 @@ same line, not to the previous line's first stamp. Word-timing hovers are relati
 line's first stamp. Tag hovers resolve the exact token under the cursor, including tags that
 share a line.
 
+## Sorting semantics
+
+Sorting is one whole-document replacement: tags stay on top, cues are stable-sorted by raw
+timestamp, every emitted line keeps its own terminator, and trailing blank lines survive. By
+default unrecognized lines (standalone section labels) and interior blank lines are dropped and
+counted in the result message. With `keepUnrecognized` (setting
+`lrcToolkit.sort.keepSectionLabels`), unrecognized lines are kept with a strict attachment rule:
+**each label sticks to the first cue line that follows it** — blanks and tags in between are
+skipped, several labels ride above the same cue in original order, and a label with no
+following cue is still dropped and counted. The dropped-lines message keeps counting exactly
+what was removed; labels that travel with a cue are not drops.
+
+## Statistics semantics
+
+- Each cue line contributes only its **first stamp** to the timeline (duration, gaps,
+  duplicates). Later stamps on the same line never start a new beat; within-line duplicate
+  stamps are the analyzer's business, reported per line.
+- `duplicateTimestampCount` classifies adjacent same-start pairs the same way the analyzer's
+  once-per-document `duplicate-timestamp` hint does: a pair whose two lines carry **different**
+  trimmed texts is the bilingual convention (original + translation) and is expected, so it does
+  not count; only pairs whose texts are identical are true duplicates. The classification lives
+  in `services/stats.ts` and cross-references the analyzer's duplicate branch — keep the two
+  comments in sync when changing either.
+
 ## Offset semantics (ADR 0004)
 
 `display time = timestamp − offset` with a **positive** offset making lyrics appear **earlier**
@@ -128,6 +184,10 @@ consequences:
 1. A uniform offset never changes relative order, so sorting uses raw timestamps.
 2. *Apply offset* shifts raw stamps by `−offset` and deletes the tag — display timing is
    preserved exactly.
+
+For players that interpret the sign the other way, *Invert [offset:] Sign* flips the first
+valid tag (`+500` → `-500`) without touching any timestamp; the rewritten value always carries
+an explicit sign, and duplicated tags are left untouched (players honour the first anyway).
 
 ## Design decisions index
 

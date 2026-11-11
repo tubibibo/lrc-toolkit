@@ -38,7 +38,12 @@ export interface LrcDiagnostic {
   /** Stable machine-readable identifier, e.g. `invalid-timestamp`. */
   code: string;
   message: string;
-  fix?: DiagnosticFix;
+  /**
+   * Optional quick fixes, offered in order. A diagnostic may carry several
+   * (e.g. an out-of-range timestamp can be carried into the minutes or
+   * clamped to 59) — the adapter renders each as its own CodeAction.
+   */
+  fixes?: DiagnosticFix[];
 }
 
 /** Digits used for the fractional part of a timestamp (0–3). */
