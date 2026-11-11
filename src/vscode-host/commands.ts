@@ -162,28 +162,23 @@ export function registerCommands(store: DocumentStore): vscode.Disposable[] {
     }
     const saved = editor.document.uri.scheme !== "untitled";
     const proposedName = `${basename(editor.document.uri.fsPath).replace(/\.lrc$/i, "")}.srt`;
+    // Anchor the dialog at the document's own folder — a bare filename would
+    // start the save dialog in a root directory (review fix R1).
+    const defaultUri =
+      saved && proposedName !== ".srt"
+        ? vscode.Uri.joinPath(editor.document.uri, "..", proposedName)
+        : undefined;
     const target = await vscode.window.showSaveDialog({
       title: "Export as SRT",
       filters: { "SubRip subtitles": ["srt"] },
-      ...(saved && proposedName !== ".srt" ? { defaultUri: vscode.Uri.file(proposedName) } : {}),
+      ...(defaultUri ? { defaultUri } : {}),
     });
     if (!target) {
       return;
     }
-    // Never overwrite silently: a simple modal confirm for existing files.
-    try {
-      await vscode.workspace.fs.stat(target);
-      const overwrite = await vscode.window.showWarningMessage(
-        `"${basename(target.fsPath)}" already exists. Overwrite it?`,
-        { modal: true },
-        "Overwrite",
-      );
-      if (overwrite !== "Overwrite") {
-        return;
-      }
-    } catch {
-      // stat failing means the file does not exist yet — safe to write.
-    }
+    // No extra overwrite modal: the save dialog already asks before
+    // replacing an existing file, so a second confirm would only double the
+    // interruption (review fix R9).
     try {
       await vscode.workspace.fs.writeFile(target, new TextEncoder().encode(formatSrt(cues)));
     } catch {

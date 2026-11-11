@@ -195,6 +195,12 @@ export interface DocumentStats {
   effectiveTimesMs: number[];
   /** Consecutive cue times farther apart than the configured threshold. */
   gaps: InstrumentalGap[];
-  /** Number of cue lines starting exactly where the previous one started. */
+  /**
+   * Number of adjacent same-start cue pairs counted as true duplicates — an
+   * adjacent pair with different trimmed texts is the expected bilingual
+   * convention and is excluded (see `services/stats.ts`; the analyzer's
+   * once-per-document `duplicate-timestamp` hint reports cross-line
+   * duplicates regardless of text, which is a different, broader count).
+   */
   duplicateTimestampCount: number;
 }

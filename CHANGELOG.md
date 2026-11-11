@@ -6,6 +6,29 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Fixed
+
+- SRT/VTT import no longer silently accepts out-of-range timings: a block whose seconds or
+  minutes exceed 59 is dropped and counted (previously `00:00:60,000` carried over into the
+  next minute — a different convention than the LRC side, which reports the same shape as
+  `invalid-timestamp`). WebVTT cue settings (`align:start line:10 …`) after the second
+  timestamp are now accepted and ignored instead of dropping the whole cue, WebVTT hours may
+  run past two digits, and a block that smuggles a second timing line into its text is dropped
+  rather than woven into the lyrics.
+- Exporting SRT anchors the save dialog at the document's own folder instead of a root
+  directory, and no longer asks a second (modal) overwrite question — the save dialog already
+  confirms replacements.
+- `Invert [offset:] Sign` flips the sign in the text domain, so `+0` becomes `-0` and keeps an
+  explicit sign as documented, and the result message shows the actual tag text.
+- Exporting SRT strips word timings with the same spacing convention as the strip command: no
+  space is inserted at CJK boundaries (`软<00:10.50>歌词` exports as `软歌词`, not `软 歌词`).
+- Merging refuses pairs whose text carries a *valid* inline timestamp (previously only
+  malformed ones were caught), and the skip message enumerates the real refusal reasons.
+- Statistics documentation now states precisely how the duplicate count differs from the
+  analyzer's once-per-document hint; stale comments and the "≈ 27 KB" size claims were
+  corrected, and the settings description of `sort.keepSectionLabels` says that *all*
+  unrecognized lines are kept, not only section labels.
+
 ### Added
 
 - Bilingual tools following the community `original|translation` convention: `Merge Bilingual

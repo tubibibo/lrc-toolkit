@@ -88,7 +88,8 @@ document for these shared start times. `Merge Bilingual Lines` / `Split Bilingua
 implement the matching `original|translation` convention as explicit commands, and statistics
 treat such pairs as expected rather than counting them as duplicate timestamps. A timestamp
 with seconds above 59 (e.g. `[01:75.00]`) offers two quick fixes: carry the excess seconds
-into the minutes, or clamp them to 59.
+into the minutes, or clamp them to 59 — unless carrying would overflow the four-digit minute
+budget, in which case only the clamp is offered.
 
 ### Settings
 
@@ -157,7 +158,7 @@ test of the real esbuild bundle) without an editor runtime.
 guardrail), the layering guardrail, Prettier, the unit tests, the esbuild bundle, the headless
 adapter smoke test and `vsce package`. Results are recorded in
 [docs/verification.md](docs/verification.md).
-The packaged extension is ≈ 27 KB.
+The packaged extension is ≈ 33.5 KB.
 
 ## Roadmap
 
@@ -192,4 +193,4 @@ SRT/VTT 字幕导入导出（保真范围 = 时间轴 + 纯文本）、文档统
 标记（如 `[00:12.00][Chorus]`）作为歌词文本保留。
 
 架构上采用“无框架核心 + 薄适配层”分层（核心层通过 ESLint 强制禁止依赖 `vscode`），
-零运行时依赖，打包后约 27 KB。详细设计见 [docs/design.md](docs/design.md)。
+零运行时依赖，打包后约 33.5 KB。详细设计见 [docs/design.md](docs/design.md)。

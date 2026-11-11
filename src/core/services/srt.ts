@@ -8,9 +8,12 @@
  * what was removed" convention as the sort command's dropped lines.
  *
  * Import accepts the SRT shape (`HH:MM:SS,mmm --> HH:MM:SS,mmm`, optional
- * index line, blank line between blocks) plus the two WebVTT variations:
- * a `.` millisecond separator and optional hours (`MM:SS.mmm`), with or
- * without a `WEBVTT` signature header.
+ * index line, blank line between blocks) plus the WebVTT variations:
+ * a `.` millisecond separator, optional hours (`MM:SS.mmm`, two digits or
+ * more), trailing cue settings (accepted and ignored), with or without a
+ * `WEBVTT` signature header. Blocks whose timing values are out of range
+ * (seconds or minutes above 59) or that smuggle a second timing line into
+ * the text are dropped and counted, never silently carried.
  */
 
 import type { LrcDocument } from "../model";
@@ -33,12 +36,27 @@ export interface ParseSrtResult {
 }
 
 /**
- * One SRT/WebVTT timing line. Hours are optional (WebVTT `MM:SS.mmm`), the
- * millisecond separator may be `,` (SRT) or `.` (WebVTT), and the fraction
- * carries 1–3 digits.
+ * One SRT/WebVTT timing line. Hours are optional (WebVTT `MM:SS.mmm`) and
+ * may run past two digits (`100:00:00.000` is legal VTT), the millisecond
+ * separator may be `,` (SRT) or `.` (WebVTT), the fraction carries 1–3
+ * digits, and VTT cue settings (`align:start line:10 …`) may follow the
+ * second timestamp — they are accepted and ignored. Value ranges (seconds
+ * and minutes within 0–59) are checked separately in {@link timingInRange}:
+ * the regex decides *shape*, values out of range make the block dropped,
+ * never silently carried (review fix R4/F1).
  */
 const SRT_TIMING_LINE =
-  /^\s*(?:(\d{1,2}):)?(\d{1,2}):(\d{2})(?:[.,](\d{1,3}))?\s*-->\s*(?:(\d{1,2}):)?(\d{1,2}):(\d{2})(?:[.,](\d{1,3}))?\s*$/;
+  /^\s*(?:(\d{2,}):)?(\d{1,2}):(\d{2})(?:[.,](\d{1,3}))?\s*-->\s*(?:(\d{2,}):)?(\d{1,2}):(\d{2})(?:[.,](\d{1,3}))?(?:\s+\S.*)?$/;
+
+/** True when every numeric field of the timing match is inside its range. */
+function timingInRange(match: RegExpExecArray): boolean {
+  const minutes = [match[2], match[6]];
+  const seconds = [match[3], match[7]];
+  return (
+    minutes.every((value) => value === undefined || Number(value) <= 59) &&
+    seconds.every((value) => value === undefined || Number(value) <= 59)
+  );
+}
 
 /** VTT sections and the signature header are not lyric cues. */
 const DROPPED_SECTION = /^(STYLE|NOTE)(\s|$)/;
@@ -89,6 +107,10 @@ export function parseSrt(text: string): ParseSrtResult {
     // The timing line comes right after the optional numeric index.
     const timingMatch = SRT_TIMING_LINE.exec(block[1] ?? "");
     if (timingMatch && /^\d+\s*$/.test(block[0] ?? "")) {
+      if (!timingInRange(timingMatch)) {
+        droppedBlocks++;
+        continue;
+      }
       const cue = buildCue(timingMatch, block, 2);
       if (cue) {
         cues.push(cue);
@@ -99,6 +121,10 @@ export function parseSrt(text: string): ParseSrtResult {
     }
     const indexlessMatch = SRT_TIMING_LINE.exec(block[0] ?? "");
     if (indexlessMatch) {
+      if (!timingInRange(indexlessMatch)) {
+        droppedBlocks++;
+        continue;
+      }
       const cue = buildCue(indexlessMatch, block, 1);
       if (cue) {
         cues.push(cue);
@@ -116,9 +142,16 @@ export function parseSrt(text: string): ParseSrtResult {
 /**
  * Build a cue from a timing match plus the text lines that follow it.
  * Returns null when the block carries no text at all — a cue without text
- * is meaningless in a lyric file and counts as dropped.
+ * is meaningless in a lyric file and counts as dropped — or when a text
+ * line turns out to be a second timing line (a malformed block, also
+ * dropped rather than smuggled into the lyrics; review fix F6/R4).
  */
 function buildCue(match: RegExpExecArray, block: string[], textStart: number): SrtCue | null {
+  for (const line of block.slice(textStart)) {
+    if (SRT_TIMING_LINE.test(line)) {
+      return null;
+    }
+  }
   const text = block
     .slice(textStart)
     .join(" ")
@@ -178,13 +211,28 @@ export function lrcToSrtCues(doc: LrcDocument): Array<{ startMs: number; text: s
     const spans = [...line.wordTimings, ...line.invalidWordTimings].sort(
       (a, b) => a.start - b.start,
     );
-    let text = "";
+    const parts: string[] = [];
     let cursor = line.textStart;
     for (const span of spans) {
-      text += `${doc.text.slice(cursor, span.start)} `;
+      parts.push(doc.text.slice(cursor, span.start));
       cursor = span.end;
     }
-    text += doc.text.slice(cursor, line.textEnd);
+    parts.push(doc.text.slice(cursor, line.textEnd));
+    // Word-timing boundaries get a space only between ASCII word characters:
+    // `软<…>歌词` must not become `软 歌词`, while `hello<…>world` still
+    // reads as two words (review fix F5/R6 — same convention as the strip
+    // command, which concatenates directly).
+    let text = "";
+    for (const part of parts) {
+      if (text === "" || part === "") {
+        text += part;
+        continue;
+      }
+      const prevEnd = text.charAt(text.length - 1);
+      const nextStart = part.charAt(0);
+      const needsSpace = /\w/.test(prevEnd) && /\w/.test(nextStart);
+      text += needsSpace ? ` ${part}` : part;
+    }
     text = text
       .replace(/ {2,}/g, " ")
       .replace(/^[ \t]+/, "")

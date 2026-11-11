@@ -159,4 +159,50 @@ describe("lrcToSrtCues", () => {
     const cues = lrcToSrtCues(parseDocument("[ti:x]\nplain prose\n[00:30.00]\n[00:40.00]real\n"));
     expect(cues).toEqual([{ startMs: 40_000, text: "real" }]);
   });
+
+  it("keeps CJK word-timing boundaries tight and latin ones spaced (review F5)", () => {
+    const cjk = lrcToSrtCues(parseDocument("[00:10.00]<00:10.50>你<00:11.00>好<00:12.00>世界\n"));
+    expect(cjk[0]?.text).toBe("你好世界");
+    const latin = lrcToSrtCues(parseDocument("[00:10.00]<00:10.50>soft<00:11.00>lyrics\n"));
+    expect(latin[0]?.text).toBe("soft lyrics");
+  });
+});
+
+describe("parseSrt rejection and tolerance edges (review wave)", () => {
+  it("drops blocks whose seconds exceed 59 instead of silently carrying them (F1)", () => {
+    const result = parseSrt("1\n00:00:60,000 --> 00:00:70,000\nx\n");
+    expect(result.cues).toHaveLength(0);
+    expect(result.droppedBlocks).toBe(1);
+  });
+
+  it("accepts trailing VTT cue settings instead of dropping the whole block (F2)", () => {
+    const result = parseSrt("00:01.000 --> 00:02.000 align:start line:10\nhello\n");
+    expect(result.cues).toEqual([{ startMs: 1_000, endMs: 2_000, text: "hello" }]);
+    expect(result.droppedBlocks).toBe(0);
+  });
+
+  it("accepts WebVTT hours beyond two digits (F3)", () => {
+    const result = parseSrt("WEBVTT\n\n100:00:00.000 --> 100:00:05.000\nx\n");
+    expect(result.cues[0]?.startMs).toBe(360_000_000);
+    expect(result.droppedBlocks).toBe(0);
+  });
+
+  it("drops a block that smuggles a second timing line into its text (F6)", () => {
+    const result = parseSrt(
+      "1\n00:00:01,000 --> 00:00:02,000\n00:00:03,000 --> 00:00:04,000\ntext\n",
+    );
+    expect(result.cues).toHaveLength(0);
+    expect(result.droppedBlocks).toBe(1);
+  });
+
+  it("round-trips a VTT file with dot separators and no hours (R8)", () => {
+    const source = "WEBVTT\n\n00:01.000 --> 00:02.000\nhello\n\n00:05.000 --> 00:06.500\nworld\n";
+    const once = parseSrt(source);
+    const formatted = formatSrt(once.cues.map((cue) => ({ startMs: cue.startMs, text: cue.text })));
+    const twice = parseSrt(formatted);
+    expect(twice.cues.map((cue) => [cue.startMs, cue.text])).toEqual([
+      [1_000, "hello"],
+      [5_000, "world"],
+    ]);
+  });
 });

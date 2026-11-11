@@ -14,7 +14,7 @@
  *  - word-timing-before-cue  (warning) word timing starts before its line's timestamp
  *  - word-timing-disorder    (warning) word timings are not ascending
  *  - invalid-word-timing     (warning) `<...>` token looks like a word timing but is malformed
- *  - suspected-encoding      (info)    lyric text contains U+FFFD replacement characters
+ *  - suspected-encoding      (info)    document text contains U+FFFD replacement characters
  */
 
 import type {
@@ -148,7 +148,7 @@ function analyzeCue(
         severity: "error",
         code: "invalid-timestamp",
         message:
-          "Malformed timestamp — minutes may be 0–999 but seconds must stay within 0–59, e.g. [01:23.45].",
+          "Malformed timestamp — minutes may reach 9999 but seconds must stay within 0–59, e.g. [01:23.45].",
         fixes: outOfRangeFixes(token, doc.text.slice(token.start + 1, token.end - 1)),
       });
     }

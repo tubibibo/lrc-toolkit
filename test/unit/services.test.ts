@@ -387,6 +387,17 @@ describe("mergeBilingualPairs", () => {
     expect(mergeBilingualPairs(parseDocument("[00:10.00]a\n\n[00:10.00]b\n")).pairCount).toBe(0);
   });
 
+  it("refuses pairs whose text carries a valid inline stamp (review R12)", () => {
+    // The analyzer never flags a *valid* inline timestamp, but merging would
+    // absorb it as lyrics — the promised "extra stamps are refused" covers
+    // the valid shape too.
+    const { pairCount, skippedCount } = mergeBilingualPairs(
+      parseDocument("[00:10.00]see [00:15.00] here\n[00:10.00]译文\n"),
+    );
+    expect(pairCount).toBe(0);
+    expect(skippedCount).toBe(1);
+  });
+
   it("merges only the first two of three same-time lines", () => {
     const text = "[00:10.00]a\n[00:10.00]b\n[00:10.00]c\n";
     const { edits, pairCount } = mergeBilingualPairs(parseDocument(text));
@@ -489,6 +500,24 @@ describe("invertOffsetSign", () => {
     const outcome = runCommand("invertOffsetSign", "[offset:+500]\n[00:10.00]a\n");
     expect(outcome.edits[0]?.newText).toBe("-500");
     expect(outcome.messages[0]).toContain("+500 → -500");
+  });
+
+  it("flips zero in the text domain, keeping the explicit sign (review F4)", () => {
+    expect(
+      applyEdits("[offset:+0]\n", invertOffsetSign(parseDocument("[offset:+0]\n"))!.edits),
+    ).toBe("[offset:-0]\n");
+    expect(
+      applyEdits("[offset:-0]\n", invertOffsetSign(parseDocument("[offset:-0]\n"))!.edits),
+    ).toBe("[offset:+0]\n");
+    expect(applyEdits("[offset:0]\n", invertOffsetSign(parseDocument("[offset:0]\n"))!.edits)).toBe(
+      "[offset:-0]\n",
+    );
+  });
+
+  it("reports a zero flip with the tag text, not an unchanged millisecond pair", () => {
+    const outcome = runCommand("invertOffsetSign", "[offset:+0]\n[00:10.00]a\n");
+    expect(outcome.edits[0]?.newText).toBe("-0");
+    expect(outcome.messages[0]).toContain("+0 → -0");
   });
 });
 

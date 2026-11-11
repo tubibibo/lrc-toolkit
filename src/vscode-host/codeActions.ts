@@ -18,7 +18,8 @@ function requested(context: vscode.CodeActionContext, kind: vscode.CodeActionKin
   return !only || only.contains(kind) || kind.contains(only);
 }
 
-class LrcCodeActionProvider implements vscode.CodeActionProvider {
+/** Exported for the in-process adapter tests (see test/vscode-host/codeActions.test.ts). */
+export class LrcCodeActionProvider implements vscode.CodeActionProvider {
   constructor(private readonly store: DocumentStore) {}
 
   provideCodeActions(
@@ -46,16 +47,18 @@ class LrcCodeActionProvider implements vscode.CodeActionProvider {
   ): vscode.CodeAction[] {
     const actions: vscode.CodeAction[] = [];
     for (const issue of issues) {
+      // Computed once per diagnostic — the per-fix loop must not rebuild it
+      // (review fix R10: the fixes[] migration had nested this construction).
+      const issueRange = new vscode.Range(
+        document.positionAt(issue.start),
+        document.positionAt(issue.end),
+      );
+      if (!issueRange.intersection(range)) {
+        continue;
+      }
       // A diagnostic may carry several fixes (e.g. carry or clamp for an
       // out-of-range timestamp) — each becomes its own Quick Fix action.
       for (const fix of issue.fixes ?? []) {
-        const issueRange = new vscode.Range(
-          document.positionAt(issue.start),
-          document.positionAt(issue.end),
-        );
-        if (!issueRange.intersection(range)) {
-          continue;
-        }
         if (fix.command && isCommandId(fix.command)) {
           const action = new vscode.CodeAction(fix.title, vscode.CodeActionKind.QuickFix);
           action.command = { title: fix.title, command: `lrcToolkit.${fix.command}` };

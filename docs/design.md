@@ -192,12 +192,13 @@ or styling, so everything else is dropped and reported, never half-converted.
 - Each cue line contributes only its **first stamp** to the timeline (duration, gaps,
   duplicates). Later stamps on the same line never start a new beat; within-line duplicate
   stamps are the analyzer's business, reported per line.
-- `duplicateTimestampCount` classifies adjacent same-start pairs the same way the analyzer's
-  once-per-document `duplicate-timestamp` hint does: a pair whose two lines carry **different**
-  trimmed texts is the bilingual convention (original + translation) and is expected, so it does
-  not count; only pairs whose texts are identical are true duplicates. The classification lives
-  in `services/stats.ts` and cross-references the analyzer's duplicate branch — keep the two
-  comments in sync when changing either.
+- `duplicateTimestampCount` counts adjacent same-start pairs **for the same reason** the
+  analyzer's once-per-document `duplicate-timestamp` hint exists — the bilingual convention —
+  but the two are not the same classification: the analyzer reports every cross-line duplicate
+  once per document regardless of text, while the statistic treats a pair whose two lines carry
+  **different** trimmed texts as expected (original + translation) and counts only pairs whose
+  texts are identical. The classification lives in `services/stats.ts` and cross-references the
+  analyzer's duplicate branch — keep the two comments in sync when changing either.
 
 ## Offset semantics (ADR 0004)
 

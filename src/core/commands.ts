@@ -164,6 +164,8 @@ export function runCommand(
       return { edits: [], messages: formatStatsReport(stats, threshold) };
     }
 
+    // Naming: command ids use the user-facing "lines"; the core functions
+    // say "pairs" because they operate on a same-time pair.
     case "mergeBilingualLines": {
       const { edits, pairCount, skippedCount } = mergeBilingualPairs(doc);
       const messages: string[] = [];
@@ -172,7 +174,7 @@ export function runCommand(
       }
       if (skippedCount > 0) {
         messages.push(
-          `Skipped ${skippedCount} same-time pair(s) with word timings, stray labels, an empty side or an ambiguous '|' — merge them manually.`,
+          `Skipped ${skippedCount} same-time pair(s) with word timings (valid or malformed), stray labels, an extra stamp, an empty side or an ambiguous '|' — merge them manually.`,
         );
       }
       if (messages.length === 0) {
@@ -200,7 +202,7 @@ export function runCommand(
       return {
         edits: result.edits,
         messages: [
-          `Inverted the [offset:] tag: ${signed(result.fromMs)} → ${signed(result.toMs)} ms. Timestamps were not touched.`,
+          `Inverted the [offset:] tag: ${result.fromText} → ${result.toText} (${signed(result.toMs)} ms). Timestamps were not touched.`,
         ],
       };
     }

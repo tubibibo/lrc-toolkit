@@ -90,6 +90,10 @@ export interface InvertOffsetResult {
   fromMs: number;
   /** Offset value after the flip, in milliseconds. */
   toMs: number;
+  /** The raw tag text before the flip, e.g. `+500` — shown in the result message. */
+  fromText: string;
+  /** The raw tag text after the flip, e.g. `-500`. */
+  toText: string;
 }
 
 /**
@@ -111,13 +115,25 @@ export function invertOffsetSign(doc: LrcDocument): InvertOffsetResult | null {
       }
       // First valid tag wins — the same resolution order as resolveOffset
       // and applyOffsetTag.
-      const fromMs = Number(tag.value.trim());
+      const raw = tag.value.trim();
+      const fromMs = Number(raw);
       const toMs = -fromMs;
-      const newText = toMs > 0 ? `+${toMs}` : String(toMs);
+      // Flip the sign *in the text domain*: numeric negation loses the
+      // explicit sign on zero (`String(-0) === "0"`, so `+0` became `0`),
+      // which contradicted the "always carries an explicit sign" contract
+      // and reported a no-op as a flip (review fix F4/R3). Only the leading
+      // sign changes; the digits are preserved verbatim.
+      const toText = raw.startsWith("+")
+        ? `-${raw.slice(1)}`
+        : raw.startsWith("-")
+          ? `+${raw.slice(1)}`
+          : `-${raw}`;
       return {
-        edits: [{ start: tag.valueSpan.start, end: tag.valueSpan.end, newText }],
+        edits: [{ start: tag.valueSpan.start, end: tag.valueSpan.end, newText: toText }],
         fromMs,
         toMs,
+        fromText: raw,
+        toText,
       };
     }
   }

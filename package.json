@@ -83,7 +83,7 @@
         "lrcToolkit.sort.keepSectionLabels": {
           "type": "boolean",
           "default": false,
-          "description": "When sorting, keep standalone section labels ([Chorus], [Verse], …) instead of dropping them: each label travels with the first cue line that follows it and is re-sorted together with that cue."
+          "description": "When sorting, keep unrecognized lines (standalone section labels like [Chorus], plain prose, malformed lines) instead of dropping them: each kept line travels with the first cue line that follows it and is re-sorted together with that cue."
         }
       }
     },

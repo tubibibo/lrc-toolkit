@@ -62,10 +62,19 @@ function endsWithUnescapedBackslash(text: string): boolean {
 }
 
 /**
+ * Stamp-shaped token inside lyric text: `[12:34]`, `[00:15.00]` — a *valid*
+ * timestamp the analyzer never flags (only malformed ones land in
+ * `invalidInlineStamps`), yet merging would absorb it as if it were lyrics.
+ * The doc-promised "extra stamps are refused" covers this shape too
+ * (review fix R12).
+ */
+const INLINE_STAMP_SHAPE = /\[\d{1,4}:\d{2}(?:\.\d{1,3})?\]/;
+
+/**
  * Whether the line is a "plain" cue: exactly one timestamp and nothing else
  * that merging or splitting would have to drop or guess about. Word timings,
- * stray labels (`[Chorus]`), malformed tokens and extra stamps all
- * disqualify the line.
+ * stray labels (`[Chorus]`), malformed tokens and extra stamps — malformed
+ * or valid — all disqualify the line.
  */
 function isPlainSingleStampCue(line: CueLine): boolean {
   return (
@@ -73,7 +82,8 @@ function isPlainSingleStampCue(line: CueLine): boolean {
     line.wordTimings.length === 0 &&
     line.invalidWordTimings.length === 0 &&
     line.invalidInlineStamps.length === 0 &&
-    line.strayTokens.length === 0
+    line.strayTokens.length === 0 &&
+    !INLINE_STAMP_SHAPE.test(line.text)
   );
 }
 
