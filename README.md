@@ -26,7 +26,7 @@ See [docs/research.md](docs/research.md) for the survey.
 | Tag hover | Explains every standard metadata tag |
 | Document outline | Metadata tags and every cue line appear in the symbol outline |
 | Code actions | Quick fixes from diagnostics + source actions (sort, strip word timings, apply offset) |
-| SRT / VTT import & export | SubRip / WebVTT subtitles ↔ LRC — fidelity scope is the timeline plus plain text |
+| SRT / VTT import, SRT export | SubRip / WebVTT subtitles → LRC, and LRC → SRT — fidelity scope is the timeline plus plain text |
 | Document formatter | Normalizes spacing between timestamps and text, trims trailing whitespace |
 
 ### Commands
@@ -158,13 +158,14 @@ test of the real esbuild bundle) without an editor runtime.
 guardrail), the layering guardrail, Prettier, the unit tests, the esbuild bundle, the headless
 adapter smoke test and `vsce package`. Results are recorded in
 [docs/verification.md](docs/verification.md).
-The packaged extension is ≈ 33.5 KB.
+The packaged extension is ≈ 34.5 KB.
 
 ## Roadmap
 
 - [ ] Karaoke preview panel (play the timing against an audio file)
-- [ ] `.krc` / `.yrc` import (NetEase / Kugou encrypted formats)
-- [ ] Snippet-aware lyric import from plain text with auto-timing
+- [ ] Plain-text lyric import with auto-timing
+- [ ] Reading user-provided lyric files exported *by* the players themselves
+      (`.krc` / `.yrc`); decryption of protected formats is out of scope
 
 ## License
 
@@ -181,7 +182,7 @@ adopts the [Contributor Covenant](CODE_OF_CONDUCT.md).
 本插件提供：语法高亮、13 类实时诊断（时间轴倒退、时间戳非法、逐词时间乱序、疑似编码错误等）、
 时间戳悬停信息（绝对时间、offset 换算、与前句间隔、间奏检测）、时间轴排序、时间戳整体平移、
 offset 标签烘焙、精度归一化、逐词时间剥离、多时间戳行展开、双语行合并与拆分（`原文|译文`）、
-SRT/VTT 字幕导入导出（保真范围 = 时间轴 + 纯文本）、文档统计与格式化。
+SRT/VTT 字幕导入与 SRT 导出（保真范围 = 时间轴 + 纯文本）、文档统计与格式化。
 
 方向约定：按通用规范，正 `[offset:]` 让歌词**提前**显示（显示时间 = 时间戳 − offset，
 见 [ADR 0004](docs/adr/0004-offset-sign-convention.md)）；个别播放器方向相反，此时可用
@@ -193,4 +194,4 @@ SRT/VTT 字幕导入导出（保真范围 = 时间轴 + 纯文本）、文档统
 标记（如 `[00:12.00][Chorus]`）作为歌词文本保留。
 
 架构上采用“无框架核心 + 薄适配层”分层（核心层通过 ESLint 强制禁止依赖 `vscode`），
-零运行时依赖，打包后约 33.5 KB。详细设计见 [docs/design.md](docs/design.md)。
+零运行时依赖，打包后约 34.5 KB。详细设计见 [docs/design.md](docs/design.md)。
