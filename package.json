@@ -225,7 +225,7 @@
     "@vitest/coverage-v8": "^4.1.12",
     "@vscode/vsce": "^3.2.1",
     "esbuild": "^0.25.0",
-    "eslint": "^9.17.0",
+    "eslint": "^10.14.0",
     "eslint-config-prettier": "^9.1.0",
     "prettier": "^3.4.2",
     "typescript": "^5.7.2",
