@@ -1,0 +1,16 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      # Both require Node >= 22; the project keeps a Node 20 baseline.
+      - dependency-name: "@vitest/coverage-v8"
+        versions: ["5.x"]
+      - dependency-name: "@vscode/vsce"
+        versions: ["4.x"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
