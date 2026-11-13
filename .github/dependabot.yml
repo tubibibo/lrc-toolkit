@@ -16,6 +16,13 @@ updates:
       # range widens.
       - dependency-name: typescript
         versions: ["7.x"]
+      # Node 20 is the baseline; newer typings would typecheck against APIs
+      # the runtime does not have.
+      - dependency-name: "@types/node"
+        versions: [">=21.0.0"]
+      # Must track engines.vscode (^1.85.0).
+      - dependency-name: "@types/vscode"
+        versions: [">=1.86.0"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
